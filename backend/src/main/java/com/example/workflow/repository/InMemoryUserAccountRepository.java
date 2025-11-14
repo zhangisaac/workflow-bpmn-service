@@ -1,6 +1,8 @@
 package com.example.workflow.repository;
 
 import com.example.workflow.model.UserAccount;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
 
 import java.util.Map;
@@ -13,28 +15,29 @@ public class InMemoryUserAccountRepository implements UserAccountRepository {
     private final Map<String, UserAccount> users;
 
     public InMemoryUserAccountRepository() {
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         this.users = Map.of(
                 "admin", new UserAccount(
                         "admin",
-                        "$2a$10$7EqJtq98hPqEX7fNZaFWoe3h2U5Y.fF4UpG1HcLUj3q5uQnlQWWe",
+                        passwordEncoder.encode("admin"),
                         Set.of("ROLE_ADMIN", "ROLE_USER"),
                         Set.of("managers", "hr_staff")
                 ),
                 "user", new UserAccount(
                         "user",
-                        "$2a$10$Y1t0CuxR7Yk4V/KENjHk7uC18JNpDutLCRa14Q6gttYVOlJawVS9G",
+                        passwordEncoder.encode("user"),
                         Set.of("ROLE_USER"),
                         Set.of("employees")
                 ),
                 "manager", new UserAccount(
                         "manager",
-                        "$2a$10$P7oOIkfbQ/.uwZQzQ0imeOqRCGDpa2BkLomqKgJo0vvArk.W5AOFO",
+                        passwordEncoder.encode("manager"),
                         Set.of("ROLE_USER"),
                         Set.of("managers")
                 ),
                 "hr", new UserAccount(
                         "hr",
-                        "$2a$10$gI8DdFZ3VAb9Y/jGj33jjOqvEihQ/HVbUaz2YsmiFjCwXTlzAIXCa",
+                        passwordEncoder.encode("hr"),
                         Set.of("ROLE_USER"),
                         Set.of("hr_staff")
                 )
