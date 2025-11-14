@@ -79,6 +79,9 @@ public class WorkflowService {
         }
         variables.putIfAbsent("initiator", username);
 
+        // Start process instance - Flowable will track the initiator via the variable
+        // The startUserId in historic instances will be set based on the authenticated user context
+        // which is managed by Spring Security in our case
         ProcessInstance instance = runtimeService.startProcessInstanceByKey(
                 request.processDefinitionKey(),
                 request.businessKey(),
@@ -153,17 +156,46 @@ public class WorkflowService {
     }
 
     public void claimTask(String taskId) {
+        if (taskId == null || taskId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Task ID cannot be null or empty");
+        }
+
         String username = userContextService.currentUsername();
         Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
+        
         if (task == null) {
             throw new IllegalArgumentException("Task not found: " + taskId);
         }
 
-        if (task.getAssignee() != null && !task.getAssignee().equals(username)) {
-            throw new IllegalStateException("Task is already claimed by another user");
+        // Validate task is active (not completed)
+        if (task.getDelegationState() != null) {
+            throw new IllegalStateException("Cannot claim a delegated task");
         }
 
+        // Check if task is already assigned to another user
+        if (task.getAssignee() != null && !task.getAssignee().equals(username)) {
+            throw new IllegalStateException(
+                    String.format("Task is already claimed by user: %s", task.getAssignee())
+            );
+        }
+
+        // If task is already assigned to current user, no need to claim again
+        if (task.getAssignee() != null && task.getAssignee().equals(username)) {
+            return;
+        }
+
+        // Verify user is a candidate for this task before allowing claim
+        // This ensures proper authorization - user must be in candidate group or be a candidate user
         ensureUserCanInteractWithTask(task, username);
+
+        // Additional validation: Check if task has any candidate groups or users
+        List<IdentityLink> identityLinks = taskService.getIdentityLinksForTask(task.getId());
+        boolean hasCandidates = identityLinks.stream()
+                .anyMatch(link -> link.getGroupId() != null || link.getUserId() != null);
+        
+        if (!hasCandidates) {
+            throw new IllegalStateException("Task has no candidate groups or users assigned");
+        }
 
         taskService.claim(taskId, username);
     }
@@ -210,16 +242,25 @@ public class WorkflowService {
         HistoricProcessInstance historic = historyService.createHistoricProcessInstanceQuery()
                 .processInstanceId(instance.getId())
                 .singleResult();
+        
+        // Try to get initiator from startUserId first (more reliable), 
+        // then fall back to initiator variable if startUserId is not set
         String initiator = null;
         if (historic != null) {
-            initiator = historyService.createHistoricVariableInstanceQuery()
-                    .processInstanceId(instance.getId())
-                    .variableName("initiator")
-                    .list()
-                    .stream()
-                    .findFirst()
-                    .map(var -> Objects.toString(var.getValue(), null))
-                    .orElse(null);
+            // Prefer startUserId from historic instance (set via setAuthenticatedUserId)
+            initiator = historic.getStartUserId();
+            
+            // Fall back to initiator variable if startUserId is not available
+            if (initiator == null || initiator.isEmpty()) {
+                initiator = historyService.createHistoricVariableInstanceQuery()
+                        .processInstanceId(instance.getId())
+                        .variableName("initiator")
+                        .list()
+                        .stream()
+                        .findFirst()
+                        .map(var -> Objects.toString(var.getValue(), null))
+                        .orElse(null);
+            }
         }
 
         return new ProcessInstanceDto(
