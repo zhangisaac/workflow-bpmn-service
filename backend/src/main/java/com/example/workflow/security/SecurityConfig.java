@@ -47,12 +47,33 @@ public class SecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/h2-console/**")).permitAll()
                         // 2. 放行 Spring MVC 路径（显式指定 Servlet 路径为 "/"）
                         .requestMatchers(mvc.servletPath("/").pattern("/api/auth/**")).permitAll()
-                        .requestMatchers(mvc.servletPath("/").pattern("/swagger-ui.html")).permitAll()
-                        .requestMatchers(mvc.servletPath("/").pattern("/swagger-ui/**")).permitAll()
-                        .requestMatchers(mvc.servletPath("/").pattern("/api/docs/**")).permitAll()
-                        .requestMatchers(mvc.servletPath("/").pattern("/v3/api-docs/**")).permitAll()
-                        .requestMatchers(mvc.servletPath("/").pattern(HttpMethod.GET, "/actuator/health")).permitAll()
-                        .requestMatchers(mvc.servletPath("/").pattern(HttpMethod.GET, "/actuator/info")).permitAll()
+                        // Swagger UI and OpenAPI documentation - using both MvcRequestMatcher and AntPathRequestMatcher
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/swagger-ui.html"),
+                                new AntPathRequestMatcher("/swagger-ui/**"),
+                                new AntPathRequestMatcher("/swagger-ui.html/**"),
+                                new AntPathRequestMatcher("/swagger-ui/index.html"),
+                                mvc.servletPath("/").pattern("/swagger-ui.html"),
+                                mvc.servletPath("/").pattern("/swagger-ui/**")
+                        ).permitAll()
+                        // OpenAPI docs - using both matchers
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/api/docs"),
+                                new AntPathRequestMatcher("/api/docs/**"),
+                                new AntPathRequestMatcher("/v3/api-docs"),
+                                new AntPathRequestMatcher("/v3/api-docs/**"),
+                                mvc.servletPath("/").pattern("/api/docs"),
+                                mvc.servletPath("/").pattern("/api/docs/**"),
+                                mvc.servletPath("/").pattern("/v3/api-docs"),
+                                mvc.servletPath("/").pattern("/v3/api-docs/**")
+                        ).permitAll()
+                        // Actuator endpoints
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/actuator/health"),
+                                new AntPathRequestMatcher("/actuator/info"),
+                                mvc.servletPath("/").pattern(HttpMethod.GET, "/actuator/health"),
+                                mvc.servletPath("/").pattern(HttpMethod.GET, "/actuator/info")
+                        ).permitAll()
                         // 3. 其他所有路径需认证
                         .anyRequest().authenticated()
                 )
