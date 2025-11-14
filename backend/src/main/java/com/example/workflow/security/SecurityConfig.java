@@ -45,7 +45,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 1. 放行非 Spring MVC 路径（H2 控制台）
                         .requestMatchers(new AntPathRequestMatcher("/h2-console/**")).permitAll()
-                        // 2. 放行 Spring MVC 路径（显式指定 Servlet 路径为 "/"）
+                        // 2. Actuator endpoints - must be before other patterns
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/actuator/health"),
+                                new AntPathRequestMatcher("/actuator/health/**"),
+                                new AntPathRequestMatcher("/actuator/info"),
+                                new AntPathRequestMatcher("/actuator/info/**"),
+                                mvc.servletPath("/").pattern("/actuator/health"),
+                                mvc.servletPath("/").pattern("/actuator/health/**"),
+                                mvc.servletPath("/").pattern("/actuator/info"),
+                                mvc.servletPath("/").pattern("/actuator/info/**")
+                        ).permitAll()
+                        // 3. 放行 Spring MVC 路径（显式指定 Servlet 路径为 "/"）
                         .requestMatchers(mvc.servletPath("/").pattern("/api/auth/**")).permitAll()
                         // Swagger UI and OpenAPI documentation - using both MvcRequestMatcher and AntPathRequestMatcher
                         .requestMatchers(
@@ -67,14 +78,7 @@ public class SecurityConfig {
                                 mvc.servletPath("/").pattern("/v3/api-docs"),
                                 mvc.servletPath("/").pattern("/v3/api-docs/**")
                         ).permitAll()
-                        // Actuator endpoints
-                        .requestMatchers(
-                                new AntPathRequestMatcher("/actuator/health"),
-                                new AntPathRequestMatcher("/actuator/info"),
-                                mvc.servletPath("/").pattern(HttpMethod.GET, "/actuator/health"),
-                                mvc.servletPath("/").pattern(HttpMethod.GET, "/actuator/info")
-                        ).permitAll()
-                        // 3. 其他所有路径需认证
+                        // 4. 其他所有路径需认证
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers.frameOptions(frame -> frame.disable())) // 允许 H2 控制台 iframe 访问
