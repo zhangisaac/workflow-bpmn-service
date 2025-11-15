@@ -4,7 +4,8 @@
 
 ### Solution Applied
 
-I've updated the `SecurityConfig.java` to use both `AntPathRequestMatcher` and `MvcRequestMatcher` for Swagger UI and API documentation paths. This ensures proper path matching regardless of how Spring Security processes the requests.
+I've updated the `SecurityConfig.java` to use both `AntPathRequestMatcher` and `MvcRequestMatcher` for Swagger UI and
+API documentation paths. This ensures proper path matching regardless of how Spring Security processes the requests.
 
 ### Steps to Verify
 
@@ -15,18 +16,20 @@ I've updated the `SecurityConfig.java` to use both `AntPathRequestMatcher` and `
    ```
 
 2. **Try accessing these URLs in your browser** (should work without authentication):
-   - `http://localhost:8080/swagger-ui.html`
-   - `http://localhost:8080/api/docs`
-   - `http://localhost:8080/v3/api-docs`
-   - `http://localhost:8080/actuator/health`
-   - `http://localhost:8080/h2-console`
+    - `http://localhost:8080/swagger-ui.html`
+    - `http://localhost:8080/api/docs`
+    - `http://localhost:8080/v3/api-docs`
+    - `http://localhost:8080/actuator/health`
+    - `http://localhost:8080/h2-console`
 
 ### If Still Getting 403 Errors
 
 #### Option 1: Check Application Logs
+
 Look for security-related errors in the console output when you try to access the URLs.
 
 #### Option 2: Test with cURL
+
 Test if the endpoints are actually accessible:
 
 ```bash
@@ -41,13 +44,17 @@ curl -v http://localhost:8080/actuator/health
 ```
 
 #### Option 3: Check Browser Console
+
 Open browser developer tools (F12) and check:
+
 - Network tab: What status code is returned?
 - Console tab: Any JavaScript errors?
 - Response: What does the 403 response body say?
 
 #### Option 4: Verify SpringDoc Configuration
+
 Check if SpringDoc is properly configured. The paths in `application.yml` should match:
+
 ```yaml
 springdoc:
   api-docs:
@@ -66,7 +73,8 @@ Sometimes SpringDoc redirects to a different path. Try these variations:
 
 ### For API Endpoints (Require Authentication)
 
-All API endpoints (except `/api/auth/login`) require a JWT token. You **cannot** test them directly in a browser without authentication.
+All API endpoints (except `/api/auth/login`) require a JWT token. You **cannot** test them directly in a browser without
+authentication.
 
 **To test API endpoints:**
 
@@ -86,25 +94,30 @@ All API endpoints (except `/api/auth/login`) require a JWT token. You **cannot**
    ```
 
 4. **Or use Swagger UI:**
-   - Go to `http://localhost:8080/swagger-ui.html`
-   - Click the "Authorize" button (lock icon)
-   - Enter: `Bearer YOUR_TOKEN_HERE`
-   - Click "Authorize"
-   - Now you can test endpoints directly in Swagger UI
+    - Go to `http://localhost:8080/swagger-ui.html`
+    - Click the "Authorize" button (lock icon)
+    - Enter: `Bearer YOUR_TOKEN_HERE`
+    - Click "Authorize"
+    - Now you can test endpoints directly in Swagger UI
 
 ### Common Issues
 
 #### Issue: Swagger UI loads but shows "Failed to load API definition"
+
 **Solution:** Check if `/api/docs` or `/v3/api-docs` is accessible. Swagger UI needs to fetch the OpenAPI spec.
 
 #### Issue: 403 on all endpoints including Swagger
-**Solution:** 
+
+**Solution:**
+
 1. Verify the application restarted after security config changes
 2. Check if there are any errors in application startup logs
 3. Try clearing browser cache and cookies
 
 #### Issue: Can access Swagger but API calls return 403
+
 **Solution:** This is expected! You need to:
+
 1. Login via `/api/auth/login` to get a token
 2. Use the token in the Authorization header
 3. Or use Swagger UI's "Authorize" feature
@@ -148,6 +161,7 @@ fi
 ```
 
 Make it executable and run:
+
 ```bash
 chmod +x test-endpoints.sh
 ./test-endpoints.sh

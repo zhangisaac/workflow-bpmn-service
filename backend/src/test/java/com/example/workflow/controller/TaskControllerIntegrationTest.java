@@ -19,11 +19,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
@@ -55,7 +54,7 @@ class TaskControllerIntegrationTest {
         // Set up authentication context for testing
         UserAccount userAccount = userAccountRepository.findByUsername("user")
                 .orElseThrow();
-        
+
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 userAccount.username(),
                 null,
@@ -64,7 +63,7 @@ class TaskControllerIntegrationTest {
                         .toList()
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        
+
         // Generate JWT token
         authToken = jwtTokenProvider.generateToken(authentication);
     }
@@ -103,7 +102,7 @@ class TaskControllerIntegrationTest {
     @Test
     void testCompleteTask_InvalidTaskId() throws Exception {
         TaskCompletionRequest request = new TaskCompletionRequest(Map.of("approved", true));
-        
+
         mockMvc.perform(post("/api/tasks/invalid-task-id/complete")
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -116,7 +115,7 @@ class TaskControllerIntegrationTest {
         TaskCompletionRequest request = new TaskCompletionRequest(
                 Map.of("approved", true, "comment", "Looks good")
         );
-        
+
         // This will fail if no task exists, but tests the endpoint structure
         mockMvc.perform(post("/api/tasks/non-existent-task/complete")
                         .header("Authorization", "Bearer " + authToken)

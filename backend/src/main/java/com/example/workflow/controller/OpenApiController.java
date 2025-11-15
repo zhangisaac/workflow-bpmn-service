@@ -13,7 +13,7 @@ import java.io.IOException;
  * Controller to expose OpenAPI documentation at /v3/api-docs endpoint.
  * This ensures compatibility with standard OpenAPI 3.0 paths even when
  * springdoc.api-docs.path is customized to /api/docs.
- * 
+ * <p>
  * This controller forwards the request internally to /api/docs.
  */
 @RestController
@@ -31,7 +31,7 @@ public class OpenApiController {
             RequestDispatcher dispatcher = request.getRequestDispatcher("/api/docs");
             dispatcher.forward(request, response);
         } catch (Exception e) {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, 
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     "Failed to forward request to /api/docs: " + e.getMessage());
         }
     }

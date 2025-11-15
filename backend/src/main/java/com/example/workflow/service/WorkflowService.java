@@ -1,12 +1,6 @@
 package com.example.workflow.service;
 
-import com.example.workflow.dto.DeploymentResponse;
-import com.example.workflow.dto.HistoricProcessInstanceDto;
-import com.example.workflow.dto.HistoricTaskDto;
-import com.example.workflow.dto.ProcessInstanceDto;
-import com.example.workflow.dto.StartProcessRequest;
-import com.example.workflow.dto.TaskCompletionRequest;
-import com.example.workflow.dto.TaskDto;
+import com.example.workflow.dto.*;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
@@ -22,11 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -162,7 +152,7 @@ public class WorkflowService {
 
         String username = userContextService.currentUsername();
         Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
-        
+
         if (task == null) {
             throw new IllegalArgumentException("Task not found: " + taskId);
         }
@@ -192,7 +182,7 @@ public class WorkflowService {
         List<IdentityLink> identityLinks = taskService.getIdentityLinksForTask(task.getId());
         boolean hasCandidates = identityLinks.stream()
                 .anyMatch(link -> link.getGroupId() != null || link.getUserId() != null);
-        
+
         if (!hasCandidates) {
             throw new IllegalStateException("Task has no candidate groups or users assigned");
         }
@@ -242,14 +232,14 @@ public class WorkflowService {
         HistoricProcessInstance historic = historyService.createHistoricProcessInstanceQuery()
                 .processInstanceId(instance.getId())
                 .singleResult();
-        
+
         // Try to get initiator from startUserId first (more reliable), 
         // then fall back to initiator variable if startUserId is not set
         String initiator = null;
         if (historic != null) {
             // Prefer startUserId from historic instance (set via setAuthenticatedUserId)
             initiator = historic.getStartUserId();
-            
+
             // Fall back to initiator variable if startUserId is not available
             if (initiator == null || initiator.isEmpty()) {
                 initiator = historyService.createHistoricVariableInstanceQuery()

@@ -6,11 +6,12 @@ Base URL: `http://localhost:8080`
 
 ### Public Endpoints (No Authentication Required)
 
-| Method | Endpoint | Description | Request Body |
-|--------|----------|-------------|--------------|
-| POST | `/api/auth/login` | Authenticate user and receive JWT token | `{"username": "admin", "password": "admin"}` |
+| Method | Endpoint          | Description                             | Request Body                                 |
+|--------|-------------------|-----------------------------------------|----------------------------------------------|
+| POST   | `/api/auth/login` | Authenticate user and receive JWT token | `{"username": "admin", "password": "admin"}` |
 
 **Example Request:**
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -18,13 +19,17 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 **Example Response:**
+
 ```json
 {
   "tokenType": "Bearer",
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "expiresAt": "2025-11-14T14:00:00Z",
   "username": "admin",
-  "roles": ["ROLE_ADMIN", "ROLE_USER"]
+  "roles": [
+    "ROLE_ADMIN",
+    "ROLE_USER"
+  ]
 }
 ```
 
@@ -34,26 +39,29 @@ curl -X POST http://localhost:8080/api/auth/login \
 
 ### Requires: `ROLE_USER` or `ROLE_ADMIN`
 
-| Method | Endpoint | Description | Authorization |
-|--------|----------|-------------|---------------|
-| GET | `/api/tasks/my` | Get tasks assigned to current user | Bearer Token |
-| GET | `/api/tasks/candidate` | Get tasks available to claim | Bearer Token |
-| POST | `/api/tasks/{taskId}/claim` | Claim a candidate task | Bearer Token |
-| POST | `/api/tasks/{taskId}/complete` | Complete an assigned task | Bearer Token |
+| Method | Endpoint                       | Description                        | Authorization |
+|--------|--------------------------------|------------------------------------|---------------|
+| GET    | `/api/tasks/my`                | Get tasks assigned to current user | Bearer Token  |
+| GET    | `/api/tasks/candidate`         | Get tasks available to claim       | Bearer Token  |
+| POST   | `/api/tasks/{taskId}/claim`    | Claim a candidate task             | Bearer Token  |
+| POST   | `/api/tasks/{taskId}/complete` | Complete an assigned task          | Bearer Token  |
 
 **Example: Get My Tasks**
+
 ```bash
 curl -X GET http://localhost:8080/api/tasks/my \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 **Example: Claim Task**
+
 ```bash
 curl -X POST http://localhost:8080/api/tasks/task-123/claim \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 **Example: Complete Task**
+
 ```bash
 curl -X POST http://localhost:8080/api/tasks/task-123/complete \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -67,11 +75,12 @@ curl -X POST http://localhost:8080/api/tasks/task-123/complete \
 
 ### Process Deployment (Admin Only)
 
-| Method | Endpoint | Description | Authorization |
-|--------|----------|-------------|---------------|
-| POST | `/api/processes/deploy` | Deploy a BPMN 2.0 process definition | `ROLE_ADMIN` + Bearer Token |
+| Method | Endpoint                | Description                          | Authorization               |
+|--------|-------------------------|--------------------------------------|-----------------------------|
+| POST   | `/api/processes/deploy` | Deploy a BPMN 2.0 process definition | `ROLE_ADMIN` + Bearer Token |
 
 **Example: Deploy BPMN File**
+
 ```bash
 curl -X POST http://localhost:8080/api/processes/deploy \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -80,17 +89,18 @@ curl -X POST http://localhost:8080/api/processes/deploy \
 
 ### Process Instance Management
 
-| Method | Endpoint | Description | Authorization |
-|--------|----------|-------------|---------------|
-| POST | `/api/processes/start` | Start a new process instance | `ROLE_USER` or `ROLE_ADMIN` + Bearer Token |
-| GET | `/api/processes/active` | List active process instances | `ROLE_ADMIN` + Bearer Token |
-| POST | `/api/processes/{id}/suspend` | Suspend a process instance | `ROLE_ADMIN` + Bearer Token |
-| POST | `/api/processes/{id}/activate` | Activate a suspended process instance | `ROLE_ADMIN` + Bearer Token |
-| DELETE | `/api/processes/{id}` | Delete a process instance | `ROLE_ADMIN` + Bearer Token |
-| GET | `/api/processes/completed` | List completed process instances | `ROLE_ADMIN` + Bearer Token |
-| GET | `/api/processes/{id}/history/tasks` | Get historic tasks for a process instance | `ROLE_ADMIN` + Bearer Token |
+| Method | Endpoint                            | Description                               | Authorization                              |
+|--------|-------------------------------------|-------------------------------------------|--------------------------------------------|
+| POST   | `/api/processes/start`              | Start a new process instance              | `ROLE_USER` or `ROLE_ADMIN` + Bearer Token |
+| GET    | `/api/processes/active`             | List active process instances             | `ROLE_ADMIN` + Bearer Token                |
+| POST   | `/api/processes/{id}/suspend`       | Suspend a process instance                | `ROLE_ADMIN` + Bearer Token                |
+| POST   | `/api/processes/{id}/activate`      | Activate a suspended process instance     | `ROLE_ADMIN` + Bearer Token                |
+| DELETE | `/api/processes/{id}`               | Delete a process instance                 | `ROLE_ADMIN` + Bearer Token                |
+| GET    | `/api/processes/completed`          | List completed process instances          | `ROLE_ADMIN` + Bearer Token                |
+| GET    | `/api/processes/{id}/history/tasks` | Get historic tasks for a process instance | `ROLE_ADMIN` + Bearer Token                |
 
 **Example: Start Process Instance**
+
 ```bash
 curl -X POST http://localhost:8080/api/processes/start \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -106,18 +116,21 @@ curl -X POST http://localhost:8080/api/processes/start \
 ```
 
 **Example: Get Active Processes**
+
 ```bash
 curl -X GET http://localhost:8080/api/processes/active \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 **Example: Suspend Process**
+
 ```bash
 curl -X POST http://localhost:8080/api/processes/{processInstanceId}/suspend \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 **Example: Delete Process**
+
 ```bash
 curl -X DELETE "http://localhost:8080/api/processes/{processInstanceId}?reason=No%20longer%20needed" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -129,11 +142,12 @@ curl -X DELETE "http://localhost:8080/api/processes/{processInstanceId}?reason=N
 
 ### Swagger UI (Interactive API Documentation)
 
-| URL | Description |
-|-----|-------------|
+| URL                                     | Description                                                                             |
+|-----------------------------------------|-----------------------------------------------------------------------------------------|
 | `http://localhost:8080/swagger-ui.html` | **Main Swagger UI Interface** - Interactive API documentation with "Try it out" feature |
 
 **Features:**
+
 - View all available endpoints
 - Test endpoints directly from the browser
 - See request/response schemas
@@ -141,13 +155,14 @@ curl -X DELETE "http://localhost:8080/api/processes/{processInstanceId}?reason=N
 
 ### OpenAPI Documentation
 
-| URL | Description |
-|-----|-------------|
-| `http://localhost:8080/api/docs` | OpenAPI JSON specification |
-| `http://localhost:8080/v3/api-docs` | OpenAPI 3.0 JSON specification |
+| URL                                      | Description                    |
+|------------------------------------------|--------------------------------|
+| `http://localhost:8080/api/docs`         | OpenAPI JSON specification     |
+| `http://localhost:8080/v3/api-docs`      | OpenAPI 3.0 JSON specification |
 | `http://localhost:8080/v3/api-docs.yaml` | OpenAPI 3.0 YAML specification |
 
 **Example: Get OpenAPI JSON**
+
 ```bash
 curl http://localhost:8080/api/docs
 ```
@@ -158,16 +173,18 @@ curl http://localhost:8080/api/docs
 
 ### H2 Database Console
 
-| URL | Description |
-|-----|-------------|
+| URL                                | Description                                             |
+|------------------------------------|---------------------------------------------------------|
 | `http://localhost:8080/h2-console` | **H2 Database Web Console** - Access in-memory database |
 
 **Connection Settings:**
+
 - **JDBC URL:** `jdbc:h2:mem:workflow`
 - **Username:** `sa`
 - **Password:** (leave empty)
 
 **Useful Tables:**
+
 - `ACT_RU_TASK` - Runtime tasks
 - `ACT_RU_EXECUTION` - Process executions
 - `ACT_RU_PROCESSINST` - Process instances
@@ -183,17 +200,19 @@ curl http://localhost:8080/api/docs
 
 ### Spring Boot Actuator
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/actuator/health` | Application health status |
-| GET | `/actuator/info` | Application information |
+| Method | Endpoint           | Description               |
+|--------|--------------------|---------------------------|
+| GET    | `/actuator/health` | Application health status |
+| GET    | `/actuator/info`   | Application information   |
 
 **Example: Check Health**
+
 ```bash
 curl http://localhost:8080/actuator/health
 ```
 
 **Example Response:**
+
 ```json
 {
   "status": "UP"
@@ -204,18 +223,19 @@ curl http://localhost:8080/actuator/health
 
 ## 👥 Default Test Users
 
-| Username | Password | Roles | Candidate Groups | Use Case |
-|----------|----------|-------|------------------|----------|
-| `admin` | `admin` | `ROLE_ADMIN`, `ROLE_USER` | `managers`, `hr_staff` | Full access, can deploy processes |
-| `user` | `user` | `ROLE_USER` | `employees` | Regular user, can start processes |
-| `manager` | `manager` | `ROLE_USER` | `managers` | Can claim manager approval tasks |
-| `hr` | `hr` | `ROLE_USER` | `hr_staff` | Can claim HR approval tasks |
+| Username  | Password  | Roles                     | Candidate Groups       | Use Case                          |
+|-----------|-----------|---------------------------|------------------------|-----------------------------------|
+| `admin`   | `admin`   | `ROLE_ADMIN`, `ROLE_USER` | `managers`, `hr_staff` | Full access, can deploy processes |
+| `user`    | `user`    | `ROLE_USER`               | `employees`            | Regular user, can start processes |
+| `manager` | `manager` | `ROLE_USER`               | `managers`             | Can claim manager approval tasks  |
+| `hr`      | `hr`      | `ROLE_USER`               | `hr_staff`             | Can claim HR approval tasks       |
 
 ---
 
 ## 🧪 Complete Testing Workflow Example
 
 ### 1. Login as Admin
+
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -224,6 +244,7 @@ TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
 ```
 
 ### 2. Start a Process Instance
+
 ```bash
 curl -X POST http://localhost:8080/api/processes/start \
   -H "Authorization: Bearer $TOKEN" \
@@ -239,12 +260,14 @@ curl -X POST http://localhost:8080/api/processes/start \
 ```
 
 ### 3. Get Active Processes
+
 ```bash
 curl -X GET http://localhost:8080/api/processes/active \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 4. Login as Manager
+
 ```bash
 MANAGER_TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -253,18 +276,21 @@ MANAGER_TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
 ```
 
 ### 5. Get Candidate Tasks
+
 ```bash
 curl -X GET http://localhost:8080/api/tasks/candidate \
   -H "Authorization: Bearer $MANAGER_TOKEN"
 ```
 
 ### 6. Claim a Task
+
 ```bash
 curl -X POST http://localhost:8080/api/tasks/{taskId}/claim \
   -H "Authorization: Bearer $MANAGER_TOKEN"
 ```
 
 ### 7. Complete the Task
+
 ```bash
 curl -X POST http://localhost:8080/api/tasks/{taskId}/complete \
   -H "Authorization: Bearer $MANAGER_TOKEN" \
@@ -283,22 +309,22 @@ curl -X POST http://localhost:8080/api/tasks/{taskId}/complete \
 
 2. **Token Expiration:** JWT tokens expire after 120 minutes (configurable in `application.yml`)
 
-3. **Content-Type:** 
-   - JSON endpoints: `Content-Type: application/json`
-   - File upload: `Content-Type: multipart/form-data`
+3. **Content-Type:**
+    - JSON endpoints: `Content-Type: application/json`
+    - File upload: `Content-Type: multipart/form-data`
 
 4. **Error Responses:** All endpoints return standard HTTP status codes:
-   - `200 OK` - Success
-   - `400 Bad Request` - Invalid request
-   - `401 Unauthorized` - Missing or invalid token
-   - `403 Forbidden` - Insufficient permissions
-   - `404 Not Found` - Resource not found
-   - `500 Internal Server Error` - Server error
+    - `200 OK` - Success
+    - `400 Bad Request` - Invalid request
+    - `401 Unauthorized` - Missing or invalid token
+    - `403 Forbidden` - Insufficient permissions
+    - `404 Not Found` - Resource not found
+    - `500 Internal Server Error` - Server error
 
-5. **Swagger UI Authentication:** 
-   - Click the "Authorize" button in Swagger UI
-   - Enter: `Bearer <your-jwt-token>`
-   - Click "Authorize" to enable authenticated requests
+5. **Swagger UI Authentication:**
+    - Click the "Authorize" button in Swagger UI
+    - Enter: `Bearer <your-jwt-token>`
+    - Click "Authorize" to enable authenticated requests
 
 ---
 
