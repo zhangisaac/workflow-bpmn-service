@@ -1,43 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
-             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xmlns:flowable="http://flowable.org/bpmn"
+<definitions xmlns:flowable="http://flowable.org/bpmn"
+             xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
              targetNamespace="http://example.com/workflow/leave-request">
-  <process id="leaveRequestProcess" name="Leave Request Process" isExecutable="true">
-    <startEvent id="startEvent" name="Submit Leave Request"/>
-    <sequenceFlow id="flow_start_to_submit" sourceRef="startEvent" targetRef="submitRequestTask"/>
+    <process id="leaveRequestProcess" name="Leave Request Process" isExecutable="true">
+        <startEvent id="startEvent" name="Submit Leave Request"/>
+        <sequenceFlow id="flow_start_to_submit" sourceRef="startEvent" targetRef="submitRequestTask"/>
 
-    <userTask id="submitRequestTask" name="Submit Leave Request" flowable:assignee="${initiator}">
-      <extensionElements>
-        <flowable:formProperty id="duration" name="Number of Days" type="long" required="true"/>
-        <flowable:formProperty id="reason" name="Reason" type="string" required="true"/>
-      </extensionElements>
-    </userTask>
-    <sequenceFlow id="flow_submit_to_manager" sourceRef="submitRequestTask" targetRef="managerApprovalTask"/>
+        <userTask id="submitRequestTask" name="Submit Leave Request" flowable:assignee="${initiator}">
+            <extensionElements>
+                <flowable:formProperty id="duration" name="Number of Days" type="long" required="true"/>
+                <flowable:formProperty id="reason" name="Reason" type="string" required="true"/>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="flow_submit_to_manager" sourceRef="submitRequestTask" targetRef="managerApprovalTask"/>
 
-    <userTask id="managerApprovalTask" name="Manager Approval">
-      <extensionElements>
-        <flowable:taskListener event="create" class="com.example.workflow.flowable.AssignCandidateToGroupListener">
-          <flowable:field name="group">
-            <flowable:string>managers</flowable:string>
-          </flowable:field>
-        </flowable:taskListener>
-      </extensionElements>
-    </userTask>
-    <sequenceFlow id="flow_manager_to_hr" sourceRef="managerApprovalTask" targetRef="hrApprovalTask"/>
+        <userTask id="managerApprovalTask" name="Manager Approval">
+            <extensionElements>
+                <flowable:taskListener event="create"
+                                       class="com.example.workflow.flowable.AssignCandidateToGroupListener">
+                    <flowable:field name="group">
+                        <flowable:string>managers</flowable:string>
+                    </flowable:field>
+                </flowable:taskListener>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="flow_manager_to_hr" sourceRef="managerApprovalTask" targetRef="hrApprovalTask"/>
 
-    <userTask id="hrApprovalTask" name="HR Approval">
-      <extensionElements>
-        <flowable:taskListener event="create" class="com.example.workflow.flowable.AssignCandidateToGroupListener">
-          <flowable:field name="group">
-            <flowable:string>hr_staff</flowable:string>
-          </flowable:field>
-        </flowable:taskListener>
-      </extensionElements>
-    </userTask>
-    <sequenceFlow id="flow_hr_to_end" sourceRef="hrApprovalTask" targetRef="endEvent"/>
+        <userTask id="hrApprovalTask" name="HR Approval">
+            <extensionElements>
+                <flowable:taskListener event="create"
+                                       class="com.example.workflow.flowable.AssignCandidateToGroupListener">
+                    <flowable:field name="group">
+                        <flowable:string>hr_staff</flowable:string>
+                    </flowable:field>
+                </flowable:taskListener>
+            </extensionElements>
+        </userTask>
+        <sequenceFlow id="flow_hr_to_end" sourceRef="hrApprovalTask" targetRef="endEvent"/>
 
-    <endEvent id="endEvent" name="Leave Approved"/>
-  </process>
+        <endEvent id="endEvent" name="Leave Approved"/>
+    </process>
 </definitions>
 

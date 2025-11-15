@@ -1,7 +1,7 @@
 package com.example.workflow.flowable;
 
-import org.flowable.task.service.delegate.DelegateTask;
 import org.flowable.common.engine.api.delegate.Expression;
+import org.flowable.task.service.delegate.DelegateTask;
 import org.flowable.task.service.delegate.TaskListener;
 
 public class AssignCandidateToGroupListener implements TaskListener {

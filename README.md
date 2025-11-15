@@ -1,12 +1,16 @@
 # Workflow BPMN Service
 
-Simplified workflow management system built with Spring Boot, Flowable BPMN, and JWT-based security. The project demonstrates a leave-request business process with role-based access control, task management, and process monitoring APIs.
+Simplified workflow management system built with Spring Boot, Flowable BPMN, and JWT-based security. The project
+demonstrates a leave-request business process with role-based access control, task management, and process monitoring
+APIs.
 
 ## Features
 
 - **Workflow engine:** Flowable 7.0.1 with BPMN 2.0 deployment, execution, and history queries.
-- **REST APIs:** Endpoints for process deployment, instance lifecycle control, task claiming/completion, and historical reporting.
-- **Security:** JWT authentication with Spring Security 6, stateless sessions, and RBAC for `ROLE_ADMIN` and `ROLE_USER`.
+- **REST APIs:** Endpoints for process deployment, instance lifecycle control, task claiming/completion, and historical
+  reporting.
+- **Security:** JWT authentication with Spring Security 6, stateless sessions, and RBAC for `ROLE_ADMIN` and
+  `ROLE_USER`.
 - **Backend:** Spring Boot 3.1.5 with Java 17, fully compatible with Jakarta EE.
 - **Documentation:** Auto-generated OpenAPI docs (Swagger UI) via SpringDoc.
 
@@ -16,14 +20,16 @@ Simplified workflow management system built with Spring Boot, Flowable BPMN, and
 backend/   # Spring Boot + Flowable service
 ```
 
-> **Note:** The frontend Vue 3 dashboard has been moved to a separate repository at `/Users/zhangisaac/VSCodeProjects/vue-ui`.
+> **Note:** The frontend Vue 3 dashboard has been moved to a separate repository at
+`/Users/zhangisaac/VSCodeProjects/vue-ui`.
 
 ## Prerequisites
 
 - Java 17+
 - Maven 3.9+ (for backend)
 
-> `mvn` must be available on your PATH. If Maven is unavailable, install it via [Apache Maven](https://maven.apache.org/) or your system package manager.
+> `mvn` must be available on your PATH. If Maven is unavailable, install it
+> via [Apache Maven](https://maven.apache.org/) or your system package manager.
 
 ## Backend Setup (`backend/`)
 
@@ -44,18 +50,18 @@ backend/   # Spring Boot + Flowable service
 
 3. Useful endpoints:
 
-   - Swagger UI: `http://localhost:8080/swagger-ui.html`
-   - OpenAPI JSON: `http://localhost:8080/api/docs`
-   - H2 console: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:workflow`)
+    - Swagger UI: `http://localhost:8080/swagger-ui.html`
+    - OpenAPI JSON: `http://localhost:8080/api/docs`
+    - H2 console: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:workflow`)
 
 ### Default Users
 
-| Username | Password | Roles                     | Candidate Groups       |
-|----------|----------|---------------------------|------------------------|
-| admin    | admin    | ROLE_ADMIN, ROLE_USER     | managers, hr_staff     |
-| user     | user     | ROLE_USER                 | employees              |
-| manager  | manager  | ROLE_USER                 | managers               |
-| hr       | hr       | ROLE_USER                 | hr_staff               |
+| Username | Password | Roles                 | Candidate Groups   |
+|----------|----------|-----------------------|--------------------|
+| admin    | admin    | ROLE_ADMIN, ROLE_USER | managers, hr_staff |
+| user     | user     | ROLE_USER             | employees          |
+| manager  | manager  | ROLE_USER             | managers           |
+| hr       | hr       | ROLE_USER             | hr_staff           |
 
 ### BPMN Leave Request Flow
 
@@ -66,9 +72,11 @@ Deployed automatically from `classpath:/processes/leave-request.bpmn20.xml`:
 3. HR finalises (`HR Approval`, candidate group: `hr_staff`)
 4. Process completes
 
-All endpoints require JWT authentication except `/api/auth/**` and documentation/health endpoints. Administrator-only APIs cover process deployment and lifecycle actions.
+All endpoints require JWT authentication except `/api/auth/**` and documentation/health endpoints. Administrator-only
+APIs cover process deployment and lifecycle actions.
 
-> **Frontend:** The Vue 3 dashboard is available in a separate repository. See `/Users/zhangisaac/VSCodeProjects/vue-ui` for the frontend application.
+> **Frontend:** The Vue 3 dashboard is available in a separate repository. See `/Users/zhangisaac/VSCodeProjects/vue-ui`
+> for the frontend application.
 
 ## API Overview
 
@@ -98,7 +106,8 @@ Refer to Swagger UI for request/response schemas.
 ## Notes & Future Improvements
 
 - Token refresh/blacklisting is not implemented; login again once tokens expire.
-- Flowable identity data is derived from the in-memory user repository at startup. Extend the repository for persistence if needed.
+- Flowable identity data is derived from the in-memory user repository at startup. Extend the repository for persistence
+  if needed.
 - Add automated tests (unit/integration) around workflow orchestration and security for production readiness.
 
 ## License

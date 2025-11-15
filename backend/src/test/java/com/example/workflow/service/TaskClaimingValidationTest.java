@@ -1,11 +1,7 @@
 package com.example.workflow.service;
 
 import com.example.workflow.repository.UserAccountRepository;
-import org.flowable.engine.HistoryService;
-import org.flowable.engine.ProcessEngine;
-import org.flowable.engine.RepositoryService;
-import org.flowable.engine.RuntimeService;
-import org.flowable.engine.TaskService;
+import org.flowable.engine.*;
 import org.flowable.identitylink.api.IdentityLink;
 import org.flowable.task.api.Task;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +16,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -29,33 +25,25 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TaskClaimingValidationTest {
 
-    @Mock
-    private ProcessEngine processEngine;
-
-    @Mock
-    private RuntimeService runtimeService;
-
-    @Mock
-    private TaskService taskService;
-
-    @Mock
-    private HistoryService historyService;
-
-    @Mock
-    private RepositoryService repositoryService;
-
-    @Mock
-    private UserContextService userContextService;
-
-    @Mock
-    private UserAccountRepository userAccountRepository;
-
-    @InjectMocks
-    private WorkflowService workflowService;
-
     private static final String TEST_USERNAME = "testuser";
     private static final String OTHER_USER = "otheruser";
     private static final String TASK_ID = "task-123";
+    @Mock
+    private ProcessEngine processEngine;
+    @Mock
+    private RuntimeService runtimeService;
+    @Mock
+    private TaskService taskService;
+    @Mock
+    private HistoryService historyService;
+    @Mock
+    private RepositoryService repositoryService;
+    @Mock
+    private UserContextService userContextService;
+    @Mock
+    private UserAccountRepository userAccountRepository;
+    @InjectMocks
+    private WorkflowService workflowService;
 
     @BeforeEach
     void setUp() {

@@ -4,12 +4,16 @@ import com.example.workflow.dto.ProcessInstanceDto;
 import com.example.workflow.dto.StartProcessRequest;
 import com.example.workflow.dto.TaskCompletionRequest;
 import com.example.workflow.dto.TaskDto;
-import org.flowable.engine.*;
+import org.flowable.engine.HistoryService;
+import org.flowable.engine.RepositoryService;
+import org.flowable.engine.RuntimeService;
+import org.flowable.engine.TaskService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.task.api.Task;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,31 +25,24 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class WorkflowServiceTest {
 
-    @Mock
-    private RepositoryService repositoryService;
-
-    @Mock
-    private RuntimeService runtimeService;
-
-    @Mock
-    private TaskService taskService;
-
-    @Mock
-    private HistoryService historyService;
-
-    @Mock
-    private UserContextService userContextService;
-
-    @InjectMocks
-    private WorkflowService workflowService;
-
     private static final String TEST_USERNAME = "testuser";
     private static final String TEST_PROCESS_KEY = "testProcess";
+    @Mock
+    private RepositoryService repositoryService;
+    @Mock
+    private RuntimeService runtimeService;
+    @Mock
+    private TaskService taskService;
+    @Mock
+    private HistoryService historyService;
+    @Mock
+    private UserContextService userContextService;
+    @InjectMocks
+    private WorkflowService workflowService;
 
     @BeforeEach
     void setUp() {
@@ -88,9 +85,9 @@ class WorkflowServiceTest {
         verify(runtimeService).startProcessInstanceByKey(
                 eq(TEST_PROCESS_KEY),
                 eq("business-key-123"),
-                argThat(vars -> vars.containsKey("initiator") && 
-                               vars.get("initiator").equals(TEST_USERNAME) &&
-                               vars.get("key").equals("value"))
+                argThat(vars -> vars.containsKey("initiator") &&
+                        vars.get("initiator").equals(TEST_USERNAME) &&
+                        vars.get("key").equals("value"))
         );
     }
 
@@ -123,8 +120,8 @@ class WorkflowServiceTest {
         verify(runtimeService).startProcessInstanceByKey(
                 eq(TEST_PROCESS_KEY),
                 isNull(),
-                argThat(vars -> vars.containsKey("initiator") && 
-                               vars.get("initiator").equals(TEST_USERNAME))
+                argThat(vars -> vars.containsKey("initiator") &&
+                        vars.get("initiator").equals(TEST_USERNAME))
         );
     }
 
@@ -177,7 +174,7 @@ class WorkflowServiceTest {
         // Then - verify complete was called with taskId and a Map containing the variables
         ArgumentCaptor<Map<String, Object>> variablesCaptor = ArgumentCaptor.forClass(Map.class);
         verify(taskService).complete(eq(taskId), variablesCaptor.capture());
-        
+
         Map<String, Object> capturedVariables = variablesCaptor.getValue();
         assertTrue(capturedVariables.containsKey("approved"));
         assertEquals(true, capturedVariables.get("approved"));
