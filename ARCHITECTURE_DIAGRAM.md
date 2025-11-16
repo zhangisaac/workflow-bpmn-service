@@ -405,8 +405,8 @@ sequenceDiagram
 stateDiagram-v2
     [*] --> Login: POST /api/auth/login
     Login --> TokenPair: Success
-    TokenPair: Access Token (2h)
-    TokenPair: Refresh Token (7d)
+    TokenPair: Access Token (10mints)
+    TokenPair: Refresh Token (1d)
     
     TokenPair --> ValidateAccess: Request with access token
     ValidateAccess --> CheckBlacklist: Valid signature

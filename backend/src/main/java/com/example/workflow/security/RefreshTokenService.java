@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Service to manage refresh tokens.
  * Refresh tokens are long-lived tokens used to obtain new access tokens.
- * 
+ * <p>
  * This implementation uses in-memory storage. For production, consider:
  * - Using H2 database table for persistence
  * - Using Redis for distributed systems
@@ -31,64 +31,33 @@ public class RefreshTokenService {
     private final Map<String, RefreshTokenInfo> refreshTokens = new ConcurrentHashMap<>();
 
     /**
-     * Information stored with each refresh token.
-     */
-    public static class RefreshTokenInfo {
-        private final String username;
-        private final Instant expiration;
-        private final Instant createdAt;
-
-        public RefreshTokenInfo(String username, Instant expiration, Instant createdAt) {
-            this.username = username;
-            this.expiration = expiration;
-            this.createdAt = createdAt;
-        }
-
-        public String getUsername() {
-            return username;
-        }
-
-        public Instant getExpiration() {
-            return expiration;
-        }
-
-        public Instant getCreatedAt() {
-            return createdAt;
-        }
-
-        public boolean isExpired() {
-            return Instant.now().isAfter(expiration);
-        }
-    }
-
-    /**
      * Generate a new refresh token for a user.
-     * 
-     * @param username The username for whom the token is generated
+     *
+     * @param username       The username for whom the token is generated
      * @param expirationTime When the refresh token expires
      * @return The refresh token string
      */
     public String generateRefreshToken(String username, Instant expirationTime) {
         // Generate a secure random token (UUID-based)
-        String token = UUID.randomUUID().toString() + "-" + UUID.randomUUID().toString();
+        String token = UUID.randomUUID() + "-" + UUID.randomUUID();
         Instant now = Instant.now();
-        
+
         RefreshTokenInfo info = new RefreshTokenInfo(username, expirationTime, now);
         refreshTokens.put(token, info);
-        
+
         logger.debug("Generated refresh token for user: {} (expires at: {})", username, expirationTime);
         return token;
     }
 
     /**
      * Validate a refresh token and return the associated username.
-     * 
+     *
      * @param refreshToken The refresh token to validate
      * @return The username if token is valid, null otherwise
      */
     public String validateRefreshToken(String refreshToken) {
         RefreshTokenInfo info = refreshTokens.get(refreshToken);
-        
+
         if (info == null) {
             logger.debug("Refresh token not found: {}", refreshToken.substring(0, Math.min(20, refreshToken.length())));
             return null;
@@ -101,43 +70,43 @@ public class RefreshTokenService {
             return null;
         }
 
-        return info.getUsername();
+        return info.username();
     }
 
     /**
      * Revoke a refresh token (e.g., on logout or security breach).
-     * 
+     *
      * @param refreshToken The refresh token to revoke
      */
     public void revokeRefreshToken(String refreshToken) {
         RefreshTokenInfo removed = refreshTokens.remove(refreshToken);
         if (removed != null) {
-            logger.debug("Refresh token revoked for user: {}", removed.getUsername());
+            logger.debug("Refresh token revoked for user: {}", removed.username());
         }
     }
 
     /**
      * Revoke all refresh tokens for a specific user (e.g., on password change).
-     * 
+     *
      * @param username The username whose tokens should be revoked
      * @return Number of tokens revoked
      */
     public int revokeAllTokensForUser(String username) {
         int count = 0;
         var iterator = refreshTokens.entrySet().iterator();
-        
+
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            if (entry.getValue().getUsername().equals(username)) {
+            if (entry.getValue().username().equals(username)) {
                 iterator.remove();
                 count++;
             }
         }
-        
+
         if (count > 0) {
             logger.info("Revoked {} refresh tokens for user: {}", count, username);
         }
-        
+
         return count;
     }
 
@@ -148,7 +117,7 @@ public class RefreshTokenService {
     public void cleanupExpiredTokens() {
         int removed = 0;
         var iterator = refreshTokens.entrySet().iterator();
-        
+
         while (iterator.hasNext()) {
             var entry = iterator.next();
             if (entry.getValue().isExpired()) {
@@ -156,7 +125,7 @@ public class RefreshTokenService {
                 removed++;
             }
         }
-        
+
         if (removed > 0) {
             logger.info("Cleaned up {} expired refresh tokens", removed);
         }
@@ -164,11 +133,21 @@ public class RefreshTokenService {
 
     /**
      * Get the current number of active refresh tokens.
-     * 
+     *
      * @return Number of active refresh tokens
      */
     public int getActiveTokenCount() {
         return refreshTokens.size();
     }
+
+    /**
+         * Information stored with each refresh token.
+         */
+        public record RefreshTokenInfo(String username, Instant expiration, Instant createdAt) {
+
+        public boolean isExpired() {
+                return Instant.now().isAfter(expiration);
+            }
+        }
 }
 

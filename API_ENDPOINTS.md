@@ -6,10 +6,10 @@ Base URL: `http://localhost:8080`
 
 ### Public Endpoints (No Authentication Required)
 
-| Method | Endpoint            | Description                                     | Request Body                                           |
-|--------|---------------------|-------------------------------------------------|--------------------------------------------------------|
-| POST   | `/api/auth/login`   | Authenticate user and receive tokens            | `{"username": "admin", "password": "admin"}`          |
-| POST   | `/api/auth/refresh` | Refresh access token using refresh token        | `{"refreshToken": "<refresh_token>"}`                 |
+| Method | Endpoint            | Description                              | Request Body                                 |
+|--------|---------------------|------------------------------------------|----------------------------------------------|
+| POST   | `/api/auth/login`   | Authenticate user and receive tokens     | `{"username": "admin", "password": "admin"}` |
+| POST   | `/api/auth/refresh` | Refresh access token using refresh token | `{"refreshToken": "<refresh_token>"}`        |
 
 **Example: Login Request**
 
@@ -71,9 +71,9 @@ curl -X POST http://localhost:8080/api/auth/refresh \
 
 ### Authenticated Endpoints (Authentication Required)
 
-| Method | Endpoint          | Description                          | Authorization                    | Request Body (Optional)                    |
-|--------|-------------------|--------------------------------------|----------------------------------|--------------------------------------------|
-| POST   | `/api/auth/logout` | Logout user (blacklist token)        | Bearer Token                     | `{"refreshToken": "<refresh_token>"}`      |
+| Method | Endpoint           | Description                   | Authorization | Request Body (Optional)               |
+|--------|--------------------|-------------------------------|---------------|---------------------------------------|
+| POST   | `/api/auth/logout` | Logout user (blacklist token) | Bearer Token  | `{"refreshToken": "<refresh_token>"}` |
 
 **Example: Logout Request**
 
@@ -91,6 +91,7 @@ curl -X POST http://localhost:8080/api/auth/logout \
 ```
 
 **Notes:**
+
 - The `refreshToken` in the logout request body is optional. If provided, it will be revoked.
 - The access token in the Authorization header will be blacklisted.
 - After logout, both tokens become invalid and cannot be used for further requests.
@@ -395,24 +396,24 @@ curl -X POST http://localhost:8080/api/auth/logout \
    ```
 
 2. **Token Expiration:**
-   - **Access Token**: Expires after 120 minutes (2 hours) - configurable in `application.yml`
-   - **Refresh Token**: Expires after 7 days - configurable in `application.yml`
-   - Use the refresh token to obtain a new access token before it expires
+    - **Access Token**: Expires after 10 minutes - configurable in `application.yml`
+    - **Refresh Token**: Expires after 1 days - configurable in `application.yml`
+    - Use the refresh token to obtain a new access token before it expires
 
-3. **Token Refresh:** 
-   - When the access token expires, use `/api/auth/refresh` with the refresh token
-   - This returns a new access token without requiring re-login
-   - Refresh tokens are long-lived (7 days) for convenience
+3. **Token Refresh:**
+    - When the access token expires, use `/api/auth/refresh` with the refresh token
+    - This returns a new access token without requiring re-login
+    - Refresh tokens are long-lived (1 day) for convenience
 
 4. **Token Blacklisting:**
-   - When you logout, the access token is blacklisted
-   - Blacklisted tokens are rejected even if they are still valid (not expired)
-   - This provides security against token theft and allows immediate logout
+    - When you logout, the access token is blacklisted
+    - Blacklisted tokens are rejected even if they are still valid (not expired)
+    - This provides security against token theft and allows immediate logout
 
-5. **Token Storage:** 
-   - Store both `accessToken` and `refreshToken` securely in the frontend
-   - Use the access token for API requests
-   - Use the refresh token when the access token expires
+5. **Token Storage:**
+    - Store both `accessToken` and `refreshToken` securely in the frontend
+    - Use the access token for API requests
+    - Use the refresh token when the access token expires
 
 6. **Content-Type:**
     - JSON endpoints: `Content-Type: application/json`

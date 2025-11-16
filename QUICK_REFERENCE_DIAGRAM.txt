@@ -174,8 +174,8 @@
          ├──→ AuthenticationManager.authenticate()
          ├──→ InMemoryUserAccountRepository.findByUsername()
          ├──→ BCryptPasswordEncoder.matches()
-         ├──→ JwtTokenProvider.generateToken() → Access Token (2h)
-         └──→ RefreshTokenService.generateRefreshToken() → Refresh Token (7d)
+         ├──→ JwtTokenProvider.generateToken() → Access Token (10mints)
+         └──→ RefreshTokenService.generateRefreshToken() → Refresh Token (1d)
          │
          ▼
     Returns LoginResponse (accessToken + refreshToken)
@@ -256,7 +256,7 @@
     6. Results ← H2 ← DataSource ← Flowable Service ← Service ← Controller
     
     AUTHENTICATION FLOWS:
-    7. Login → Generate Access Token (2h) + Refresh Token (7d)
+    7. Login → Generate Access Token (10mints) + Refresh Token (1d)
     8. Refresh → Validate Refresh Token → Generate New Access Token
     9. Logout → Blacklist Access Token + Revoke Refresh Token
     10. Validation → Check Blacklist → Validate Signature → Set Security Context
