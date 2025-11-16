@@ -37,7 +37,8 @@ management:
 
 jwt:
   secret: change-me-in-production-please-change-me
-  expiration-in-minutes: 120
+  expiration-in-minutes: 10  # Access token expiration (10 mints)
+  refresh-expiration-in-days: 1  # Refresh token expiration (7 days)
 
 springdoc:
   api-docs:

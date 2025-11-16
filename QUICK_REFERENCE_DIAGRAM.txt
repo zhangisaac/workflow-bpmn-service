@@ -45,16 +45,20 @@
          │ HTTP Request (with/without JWT)
          ▼
     ┌─────────────────────┐
-    │ JWT Filter          │  ← Validates JWT token
+    │ JWT Filter          │  ← Validates JWT token + checks blacklist
     │ (Security Layer)    │
     └─────────────────────┘
          │
-         │ (authenticated request)
-         ▼
-    ┌─────────────────────┐
-    │ REST Controllers    │  ← AuthController, ProcessController, TaskController
-    │ (/api/**)           │
-    └─────────────────────┘
+         ├─────────────────┐
+         │                 │
+         │ (public)        │ (authenticated)
+         ▼                 ▼
+    ┌─────────────────┐  ┌─────────────────────┐
+    │ Auth Endpoints  │  │ REST Controllers    │
+    │ - /login        │  │ - ProcessController │
+    │ - /refresh      │  │ - TaskController    │
+    └─────────────────┘  │ - /logout           │
+                         └─────────────────────┘
          │
          │ (calls)
          ▼
@@ -63,16 +67,16 @@
     │                     │
     └─────────────────────┘
          │
-         ├─────────────────┐
-         │                 │
-         ▼                 ▼
-    ┌──────────┐    ┌──────────────────┐
-    │ UserRepo │    │ Flowable Services│
-    │ (Memory) │    │ - RuntimeService │
-    └──────────┘    │ - TaskService    │
-                    │ - HistoryService │
-                    │ - RepositoryService
-                    └──────────────────┘
+         ├─────────────────┬───────────────────┐
+         │                 │                   │
+         ▼                 ▼                   ▼
+    ┌──────────┐    ┌──────────────┐   ┌──────────────────┐
+    │ UserRepo │    │ Token Mgmt   │   │ Flowable Services│
+    │ (Memory) │    │ - Blacklist  │   │ - RuntimeService │
+    └──────────┘    │ - Refresh    │   │ - TaskService    │
+                    │ - JWT        │   │ - HistoryService │
+                    └──────────────┘   │ - RepositoryService
+                                       └──────────────────┘
                               │
                               │ (uses DataSource)
                               ▼
@@ -152,6 +156,95 @@
     Console:     http://localhost:8080/h2-console
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
+│                       AUTHENTICATION FLOWS                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    ┌────────────────────────────────────────────────────────────────────┐
+    │ LOGIN FLOW                                                          │
+    └────────────────────────────────────────────────────────────────────┘
+
+    Client → POST /api/auth/login
+         │
+         ▼
+    AuthController.login()
+         │
+         ▼
+    AuthService.login()
+         │
+         ├──→ AuthenticationManager.authenticate()
+         ├──→ InMemoryUserAccountRepository.findByUsername()
+         ├──→ BCryptPasswordEncoder.matches()
+         ├──→ JwtTokenProvider.generateToken() → Access Token (2h)
+         └──→ RefreshTokenService.generateRefreshToken() → Refresh Token (7d)
+         │
+         ▼
+    Returns LoginResponse (accessToken + refreshToken)
+
+    ┌────────────────────────────────────────────────────────────────────┐
+    │ REFRESH TOKEN FLOW                                                  │
+    └────────────────────────────────────────────────────────────────────┘
+
+    Client → POST /api/auth/refresh (with refreshToken)
+         │
+         ▼
+    AuthController.refreshToken()
+         │
+         ▼
+    AuthService.refreshToken()
+         │
+         ├──→ RefreshTokenService.validateRefreshToken() → username
+         ├──→ UserDetailsService.loadUserByUsername()
+         └──→ JwtTokenProvider.generateToken() → New Access Token
+         │
+         ▼
+    Returns LoginResponse (new accessToken + same refreshToken)
+
+    ┌────────────────────────────────────────────────────────────────────┐
+    │ LOGOUT FLOW                                                         │
+    └────────────────────────────────────────────────────────────────────┘
+
+    Client → POST /api/auth/logout (Authorization: Bearer token)
+         │
+         ▼
+    JwtAuthenticationFilter
+         │
+         ├──→ JwtTokenProvider.validateToken()
+         └──→ TokenBlacklistService.isTokenBlacklisted() → false
+         │
+         ▼
+    AuthController.logout()
+         │
+         ▼
+    AuthService.logout()
+         │
+         ├──→ TokenBlacklistService.blacklistToken() → Blacklist access token
+         └──→ RefreshTokenService.revokeRefreshToken() → Revoke refresh token
+         │
+         ▼
+    Returns 204 No Content
+
+    ┌────────────────────────────────────────────────────────────────────┐
+    │ TOKEN VALIDATION FLOW                                               │
+    └────────────────────────────────────────────────────────────────────┘
+
+    Request with Authorization header
+         │
+         ▼
+    JwtAuthenticationFilter.resolveToken()
+         │
+         ▼
+    JwtTokenProvider.validateToken()
+         │
+         ├──→ TokenBlacklistService.isTokenBlacklisted() → Check blacklist
+         │
+         ├──→ If blacklisted → Return false (reject)
+         │
+         └──→ If not blacklisted → Validate JWT signature & expiration
+              │
+              ├──→ If valid → Set SecurityContext authentication
+              └──→ If invalid → Return false (reject)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
 │                          FLOW SUMMARY                                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
@@ -161,4 +254,18 @@
     4. API Request → Controller → Service → Flowable Service
     5. Flowable Service → DataSource → H2 Database
     6. Results ← H2 ← DataSource ← Flowable Service ← Service ← Controller
+    
+    AUTHENTICATION FLOWS:
+    7. Login → Generate Access Token (2h) + Refresh Token (7d)
+    8. Refresh → Validate Refresh Token → Generate New Access Token
+    9. Logout → Blacklist Access Token + Revoke Refresh Token
+    10. Validation → Check Blacklist → Validate Signature → Set Security Context
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            TIMEZONE NOTE                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    - Token times (issuedAt, expiresAt) are stored as UTC Instants
+    - For local display, convert: Instant → ZonedDateTime (systemDefault zone)
+    - Example: expiresAtLocal = expiresAt.atZone(ZoneId.systemDefault())
 

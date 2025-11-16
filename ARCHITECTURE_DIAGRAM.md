@@ -16,15 +16,21 @@ graph TB
         end
         
         subgraph "REST Controllers"
-            AuthController[AuthController<br/>/api/auth/login]
+            AuthController[AuthController<br/>/api/auth/login<br/>/api/auth/refresh<br/>/api/auth/logout]
             ProcessController[ProcessController<br/>/api/processes/**]
             TaskController[TaskController<br/>/api/tasks/**]
         end
         
         subgraph "Service Layer"
-            AuthService[AuthService]
+            AuthService[AuthService<br/>+ Token Refresh<br/>+ Logout]
             WorkflowService[WorkflowService]
             UserContextService[UserContextService]
+        end
+        
+        subgraph "Token Management"
+            TokenBlacklist[TokenBlacklistService<br/>Manages blacklisted tokens]
+            RefreshToken[RefreshTokenService<br/>Manages refresh tokens]
+            JWTProvider[JwtTokenProvider<br/>+ Blacklist checking]
         end
         
         subgraph "Repository Layer"
@@ -75,8 +81,15 @@ graph TB
 
     %% Services to Repositories
     AuthService --> UserRepo
+    AuthService --> TokenBlacklist
+    AuthService --> RefreshToken
+    AuthService --> JWTProvider
     WorkflowService --> ProcessEngine
     FlowableIdentity --> IdentityService
+    
+    %% Token Management
+    JWTProvider --> TokenBlacklist
+    JWTProvider --> RefreshToken
 
     %% Flowable Services
     ProcessEngine --> RuntimeService
@@ -129,11 +142,40 @@ sequenceDiagram
     Note over Client,H2: User Login Flow
     Client->>JWTFilter: POST /api/auth/login
     JWTFilter->>Controller: AuthController.login()
-    Controller->>Service: AuthService.authenticate()
+    Controller->>Service: AuthService.login()
+    Service->>Service: AuthenticationManager.authenticate()
     Service->>Service: InMemoryUserAccountRepository.findByUsername()
     Service->>Service: BCryptPasswordEncoder.matches()
-    Service->>Service: JwtTokenProvider.generateToken()
-    Service->>Client: Returns JWT token
+    Service->>JWTProvider: JwtTokenProvider.generateToken() → Access Token
+    Service->>RefreshToken: RefreshTokenService.generateRefreshToken() → Refresh Token
+    Service->>Client: Returns LoginResponse (accessToken + refreshToken)
+    
+    Note over Client,H2: Token Refresh Flow
+    Client->>JWTFilter: POST /api/auth/refresh (with refreshToken)
+    JWTFilter->>Controller: AuthController.refreshToken()
+    Controller->>Service: AuthService.refreshToken()
+    Service->>RefreshToken: RefreshTokenService.validateRefreshToken()
+    RefreshToken-->>Service: Returns username
+    Service->>JWTProvider: JwtTokenProvider.generateToken() → New Access Token
+    Service->>Client: Returns LoginResponse (new accessToken + same refreshToken)
+    
+    Note over Client,H2: Logout Flow
+    Client->>JWTFilter: POST /api/auth/logout (with accessToken in header)
+    JWTFilter->>JWTFilter: Validate JWT token + check blacklist
+    JWTFilter->>Controller: AuthController.logout()
+    Controller->>Service: AuthService.logout()
+    Service->>TokenBlacklist: TokenBlacklistService.blacklistToken()
+    Service->>RefreshToken: RefreshTokenService.revokeRefreshToken()
+    Service->>Client: Returns 204 No Content
+    
+    Note over Client,H2: Token Validation Flow
+    Client->>JWTFilter: Request with Authorization header
+    JWTFilter->>JWTProvider: JwtTokenProvider.validateToken()
+    JWTProvider->>TokenBlacklist: TokenBlacklistService.isTokenBlacklisted()
+    TokenBlacklist-->>JWTProvider: Returns false (not blacklisted)
+    JWTProvider->>JWTProvider: Validate JWT signature and expiration
+    JWTProvider-->>JWTFilter: Returns true (valid)
+    JWTFilter->>Controller: Request proceeds
     
     Note over Client,H2: Process Deployment Flow
     Client->>JWTFilter: POST /api/processes/deploy (with JWT)
@@ -291,6 +333,117 @@ graph LR
     style WS fill:#fce4ec
 ```
 
+## Authentication Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant JWTFilter
+    participant AuthController
+    participant AuthService
+    participant JWTProvider
+    participant RefreshTokenSvc as RefreshTokenService
+    participant BlacklistSvc as TokenBlacklistService
+    participant UserRepo
+
+    Note over Client,UserRepo: Login Flow
+    Client->>JWTFilter: POST /api/auth/login
+    JWTFilter->>AuthController: login()
+    AuthController->>AuthService: login(request)
+    AuthService->>UserRepo: findByUsername()
+    AuthService->>AuthService: validatePassword()
+    AuthService->>JWTProvider: generateToken() → Access Token
+    AuthService->>RefreshTokenSvc: generateRefreshToken() → Refresh Token
+    AuthService->>Client: LoginResponse (accessToken + refreshToken)
+    
+    Note over Client,UserRepo: Refresh Token Flow
+    Client->>JWTFilter: POST /api/auth/refresh (refreshToken)
+    JWTFilter->>AuthController: refreshToken()
+    AuthController->>AuthService: refreshToken(request)
+    AuthService->>RefreshTokenSvc: validateRefreshToken()
+    RefreshTokenSvc-->>AuthService: username
+    AuthService->>UserRepo: findByUsername()
+    AuthService->>JWTProvider: generateToken() → New Access Token
+    AuthService->>Client: LoginResponse (new accessToken + refreshToken)
+    
+    Note over Client,UserRepo: Logout Flow
+    Client->>JWTFilter: POST /api/auth/logout (Authorization: Bearer token)
+    JWTFilter->>JWTProvider: validateToken()
+    JWTProvider->>BlacklistSvc: isTokenBlacklisted()
+    BlacklistSvc-->>JWTProvider: false
+    JWTProvider-->>JWTFilter: valid
+    JWTFilter->>AuthController: logout()
+    AuthController->>AuthService: logout(accessToken, refreshToken)
+    AuthService->>BlacklistSvc: blacklistToken()
+    AuthService->>RefreshTokenSvc: revokeRefreshToken()
+    AuthService->>Client: 204 No Content
+    
+    Note over Client,UserRepo: Token Validation Flow
+    Client->>JWTFilter: Request (Authorization: Bearer token)
+    JWTFilter->>JWTProvider: validateToken()
+    JWTProvider->>BlacklistSvc: isTokenBlacklisted()
+    alt Token is blacklisted
+        BlacklistSvc-->>JWTProvider: true
+        JWTProvider-->>JWTFilter: false (invalid)
+        JWTFilter->>Client: 401 Unauthorized
+    else Token not blacklisted
+        BlacklistSvc-->>JWTProvider: false
+        JWTProvider->>JWTProvider: validate signature & expiration
+        alt Token valid
+            JWTProvider-->>JWTFilter: true (valid)
+            JWTFilter->>AuthController: Request proceeds
+        else Token invalid
+            JWTProvider-->>JWTFilter: false (invalid)
+            JWTFilter->>Client: 401 Unauthorized
+        end
+    end
+```
+
+## Token Lifecycle Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Login: POST /api/auth/login
+    Login --> TokenPair: Success
+    TokenPair: Access Token (2h)
+    TokenPair: Refresh Token (7d)
+    
+    TokenPair --> ValidateAccess: Request with access token
+    ValidateAccess --> CheckBlacklist: Valid signature
+    CheckBlacklist --> Active: Not blacklisted
+    CheckBlacklist --> Rejected: Blacklisted
+    Active --> Refresh: Access token expired
+    Active --> Active: Access token valid (continue)
+    Active --> Logout: User logs out
+    
+    Refresh --> ValidateRefresh: POST /api/auth/refresh
+    ValidateRefresh --> NewAccessToken: Valid refresh token
+    ValidateRefresh --> Expired: Invalid/expired refresh token
+    NewAccessToken --> TokenPair: New access token issued
+    
+    Logout --> BlacklistAccess: Blacklist access token
+    Logout --> RevokeRefresh: Revoke refresh token
+    BlacklistAccess --> [*]
+    RevokeRefresh --> [*]
+    Expired --> [*]
+    Rejected --> [*]
+    
+    note right of TokenPair
+        Both tokens returned
+        on login
+    end note
+    
+    note right of Refresh
+        Use refresh token
+        to get new access token
+    end note
+    
+    note right of Logout
+        Blacklist access token
+        Revoke refresh token
+    end note
+```
+
 ## Key Points
 
 1. **Spring Boot Auto-Configuration**: Automatically creates DataSource from `application.yml`
@@ -299,4 +452,8 @@ graph LR
 4. **No JPA Required**: Uses JDBC directly (no JPA/Hibernate for Flowable)
 5. **User Accounts**: Stored in-memory (Java Map), NOT in H2
 6. **Connection Pool**: Spring Boot manages connection pool automatically
+7. **Token Refresh**: Refresh tokens allow obtaining new access tokens without re-login
+8. **Token Blacklisting**: Blacklisted tokens are rejected even if valid
+9. **Token Validation**: Validates blacklist status before checking signature/expiration
+10. **Timezone**: Token times are stored as UTC Instants; convert to local zone only for display
 

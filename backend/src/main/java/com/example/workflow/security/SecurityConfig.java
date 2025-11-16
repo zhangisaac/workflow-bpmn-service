@@ -53,11 +53,18 @@ public class SecurityConfig {
                                 mvc.servletPath("/").pattern("/actuator/info/**")
                         ).permitAll()
                         // 3. 放行 Spring MVC 路径（显式指定 Servlet 路径为 "/"）
-                        // Authentication endpoints - allow all HTTP methods
+                        // Authentication endpoints - login and refresh are public, logout requires auth
                         .requestMatchers(
-                                new AntPathRequestMatcher("/api/auth/**"),
-                                mvc.servletPath("/").pattern("/api/auth/**")
+                                new AntPathRequestMatcher("/api/auth/login"),
+                                new AntPathRequestMatcher("/api/auth/refresh"),
+                                mvc.servletPath("/").pattern("/api/auth/login"),
+                                mvc.servletPath("/").pattern("/api/auth/refresh")
                         ).permitAll()
+                        // Logout endpoint requires authentication
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/api/auth/logout"),
+                                mvc.servletPath("/").pattern("/api/auth/logout")
+                        ).authenticated()
                         // Swagger UI and OpenAPI documentation - using both MvcRequestMatcher and AntPathRequestMatcher
                         .requestMatchers(
                                 new AntPathRequestMatcher("/swagger-ui.html"),
