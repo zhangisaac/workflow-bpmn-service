@@ -52,6 +52,9 @@ backend/   # Spring Boot + Flowable service
 
     - Swagger UI: `http://localhost:8080/swagger-ui.html`
     - OpenAPI JSON: `http://localhost:8080/api/docs`
+    - OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+    - Actuator Info: `http://localhost:8080/actuator/info`
+    - Health Check: `http://localhost:8080/actuator/health`
     - H2 console: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:workflow`)
 
 ### Default Users
