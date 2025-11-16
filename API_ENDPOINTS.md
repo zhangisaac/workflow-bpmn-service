@@ -6,11 +6,12 @@ Base URL: `http://localhost:8080`
 
 ### Public Endpoints (No Authentication Required)
 
-| Method | Endpoint          | Description                             | Request Body                                 |
-|--------|-------------------|-----------------------------------------|----------------------------------------------|
-| POST   | `/api/auth/login` | Authenticate user and receive JWT token | `{"username": "admin", "password": "admin"}` |
+| Method | Endpoint            | Description                                     | Request Body                                           |
+|--------|---------------------|-------------------------------------------------|--------------------------------------------------------|
+| POST   | `/api/auth/login`   | Authenticate user and receive tokens            | `{"username": "admin", "password": "admin"}`          |
+| POST   | `/api/auth/refresh` | Refresh access token using refresh token        | `{"refreshToken": "<refresh_token>"}`                 |
 
-**Example Request:**
+**Example: Login Request**
 
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
@@ -18,13 +19,15 @@ curl -X POST http://localhost:8080/api/auth/login \
   -d '{"username": "admin", "password": "admin"}'
 ```
 
-**Example Response:**
+**Example: Login Response**
 
 ```json
 {
   "tokenType": "Bearer",
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000-550e8400-e29b-41d4-a716-446655440001",
   "expiresAt": "2025-11-14T14:00:00Z",
+  "refreshExpiresAt": "2025-11-21T15:00:00Z",
   "username": "admin",
   "roles": [
     "ROLE_ADMIN",
@@ -32,6 +35,65 @@ curl -X POST http://localhost:8080/api/auth/login \
   ]
 }
 ```
+
+**Example: Refresh Token Request**
+
+```bash
+curl -X POST http://localhost:8080/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken": "550e8400-e29b-41d4-a716-446655440000-550e8400-e29b-41d4-a716-446655440001"}'
+```
+
+**Example: Refresh Token Response**
+
+```json
+{
+  "tokenType": "Bearer",
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000-550e8400-e29b-41d4-a716-446655440001",
+  "expiresAt": "2025-11-14T16:00:00Z",
+  "refreshExpiresAt": "2025-11-21T15:00:00Z",
+  "username": "admin",
+  "roles": [
+    "ROLE_ADMIN",
+    "ROLE_USER"
+  ]
+}
+```
+
+**Example: Refresh Token Error (401 Unauthorized)**
+
+```json
+{
+  "error": "Invalid or expired refresh token"
+}
+```
+
+### Authenticated Endpoints (Authentication Required)
+
+| Method | Endpoint          | Description                          | Authorization                    | Request Body (Optional)                    |
+|--------|-------------------|--------------------------------------|----------------------------------|--------------------------------------------|
+| POST   | `/api/auth/logout` | Logout user (blacklist token)        | Bearer Token                     | `{"refreshToken": "<refresh_token>"}`      |
+
+**Example: Logout Request**
+
+```bash
+curl -X POST http://localhost:8080/api/auth/logout \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken": "550e8400-e29b-41d4-a716-446655440000-550e8400-e29b-41d4-a716-446655440001"}'
+```
+
+**Example: Logout Response**
+
+```
+204 No Content
+```
+
+**Notes:**
+- The `refreshToken` in the logout request body is optional. If provided, it will be revoked.
+- The access token in the Authorization header will be blacklisted.
+- After logout, both tokens become invalid and cannot be used for further requests.
 
 ---
 
@@ -237,10 +299,26 @@ curl http://localhost:8080/actuator/health
 ### 1. Login as Admin
 
 ```bash
-TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin"}' \
-  | jq -r '.accessToken')
+  -d '{"username": "admin", "password": "admin"}')
+
+TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.accessToken')
+REFRESH_TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.refreshToken')
+
+echo "Access Token: $TOKEN"
+echo "Refresh Token: $REFRESH_TOKEN"
+```
+
+### 1a. Refresh Access Token (when access token expires)
+
+```bash
+LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8080/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}")
+
+TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.accessToken')
+echo "New Access Token: $TOKEN"
 ```
 
 ### 2. Start a Process Instance
@@ -298,22 +376,49 @@ curl -X POST http://localhost:8080/api/tasks/{taskId}/complete \
   -d '{"variables": {"approved": true}}'
 ```
 
+### 8. Logout
+
+```bash
+curl -X POST http://localhost:8080/api/auth/logout \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
+```
+
 ---
 
 ## 📝 Notes
 
 1. **JWT Token Format:** All protected endpoints require the JWT token in the Authorization header:
    ```
-   Authorization: Bearer <your-jwt-token>
+   Authorization: Bearer <your-access-token>
    ```
 
-2. **Token Expiration:** JWT tokens expire after 120 minutes (configurable in `application.yml`)
+2. **Token Expiration:**
+   - **Access Token**: Expires after 120 minutes (2 hours) - configurable in `application.yml`
+   - **Refresh Token**: Expires after 7 days - configurable in `application.yml`
+   - Use the refresh token to obtain a new access token before it expires
 
-3. **Content-Type:**
+3. **Token Refresh:** 
+   - When the access token expires, use `/api/auth/refresh` with the refresh token
+   - This returns a new access token without requiring re-login
+   - Refresh tokens are long-lived (7 days) for convenience
+
+4. **Token Blacklisting:**
+   - When you logout, the access token is blacklisted
+   - Blacklisted tokens are rejected even if they are still valid (not expired)
+   - This provides security against token theft and allows immediate logout
+
+5. **Token Storage:** 
+   - Store both `accessToken` and `refreshToken` securely in the frontend
+   - Use the access token for API requests
+   - Use the refresh token when the access token expires
+
+6. **Content-Type:**
     - JSON endpoints: `Content-Type: application/json`
     - File upload: `Content-Type: multipart/form-data`
 
-4. **Error Responses:** All endpoints return standard HTTP status codes:
+7. **Error Responses:** All endpoints return standard HTTP status codes:
     - `200 OK` - Success
     - `400 Bad Request` - Invalid request
     - `401 Unauthorized` - Missing or invalid token

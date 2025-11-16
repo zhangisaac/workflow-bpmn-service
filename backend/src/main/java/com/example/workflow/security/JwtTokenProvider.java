@@ -14,7 +14,9 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Date;
@@ -26,10 +28,14 @@ public class JwtTokenProvider {
 
     private final SecretKey secretKey;
     private final long expirationInMinutes;
+    private final long refreshExpirationInDays;
+    private final TokenBlacklistService blacklistService;
 
     public JwtTokenProvider(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration-in-minutes}") long expirationInMinutes
+            @Value("${jwt.expiration-in-minutes}") long expirationInMinutes,
+            @Value("${jwt.refresh-expiration-in-days:7}") long refreshExpirationInDays,
+            TokenBlacklistService blacklistService
     ) {
         byte[] keyBytes;
         if (secret.matches("^[A-Za-z0-9+/=]{32,}$")) {
@@ -39,6 +45,8 @@ public class JwtTokenProvider {
         }
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
         this.expirationInMinutes = expirationInMinutes;
+        this.refreshExpirationInDays = refreshExpirationInDays;
+        this.blacklistService = blacklistService;
     }
 
     public String generateToken(Authentication authentication) {
@@ -65,6 +73,12 @@ public class JwtTokenProvider {
     }
 
     public boolean validateToken(String token) {
+        // First check if token is blacklisted
+        if (blacklistService.isTokenBlacklisted(token)) {
+            return false;
+        }
+
+        // Then validate token signature and expiration
         try {
             Jwts.parserBuilder()
                     .setSigningKey(secretKey)
@@ -74,6 +88,18 @@ public class JwtTokenProvider {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * Generate a refresh token (long-lived token for obtaining new access tokens).
+     * Note: In this implementation, refresh tokens are managed by RefreshTokenService,
+     * not as JWTs. This method is kept for potential future use.
+     * 
+     * @param userDetails User details
+     * @return Refresh token expiration time
+     */
+    public Instant getRefreshTokenExpiration() {
+        return Instant.now().plus(refreshExpirationInDays, ChronoUnit.DAYS);
     }
 
     public String getUsernameFromToken(String token) {
