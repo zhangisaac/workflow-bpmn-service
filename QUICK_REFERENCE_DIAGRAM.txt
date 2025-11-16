@@ -1,0 +1,164 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║          JAVA SPRING BOOT + FLOWABLE BPMN + H2 CONNECTIVITY FLOW            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           APPLICATION STARTUP                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    application.yml
+         │
+         │ (reads configuration)
+         ▼
+    Spring Boot Auto-Configuration
+         │
+         │ (creates DataSource bean)
+         ▼
+    ┌─────────────────┐
+    │   DataSource    │  ← jdbc:h2:mem:workflow
+    │      Bean       │     username: sa
+    └─────────────────┘     password: (empty)
+         │
+         │ (injected into)
+         ▼
+    Flowable Spring Boot Starter
+         │
+         │ (creates ProcessEngine with DataSource)
+         ▼
+    ┌─────────────────┐
+    │ ProcessEngine   │
+    └─────────────────┘
+         │
+         │ (database-schema-update: true)
+         ▼
+    ┌─────────────────┐
+    │   H2 Database   │  ← Creates ACT_* tables automatically
+    │  (In-Memory)     │
+    └─────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          RUNTIME REQUEST FLOW                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    Client (Browser/API)
+         │
+         │ HTTP Request (with/without JWT)
+         ▼
+    ┌─────────────────────┐
+    │ JWT Filter          │  ← Validates JWT token
+    │ (Security Layer)    │
+    └─────────────────────┘
+         │
+         │ (authenticated request)
+         ▼
+    ┌─────────────────────┐
+    │ REST Controllers    │  ← AuthController, ProcessController, TaskController
+    │ (/api/**)           │
+    └─────────────────────┘
+         │
+         │ (calls)
+         ▼
+    ┌─────────────────────┐
+    │ Service Layer       │  ← AuthService, WorkflowService
+    │                     │
+    └─────────────────────┘
+         │
+         ├─────────────────┐
+         │                 │
+         ▼                 ▼
+    ┌──────────┐    ┌──────────────────┐
+    │ UserRepo │    │ Flowable Services│
+    │ (Memory) │    │ - RuntimeService │
+    └──────────┘    │ - TaskService    │
+                    │ - HistoryService │
+                    │ - RepositoryService
+                    └──────────────────┘
+                              │
+                              │ (uses DataSource)
+                              ▼
+                         ┌──────────┐
+                         │ DataSource│
+                         └──────────┘
+                              │
+                              │ (JDBC connection)
+                              ▼
+                         ┌──────────┐
+                         │ H2 DB    │
+                         │ ACT_*    │
+                         │ Tables   │
+                         └──────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          DATA STORAGE LAYERS                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │                    H2 DATABASE (In-Memory)                      │
+    │  ┌──────────────────────────────────────────────────────┐  │
+    │  │ ACT_RU_* (Runtime Tables)                             │  │
+    │  │   - ACT_RU_TASK          (Active tasks)              │  │
+    │  │   - ACT_RU_PROCESSINST   (Process instances)          │  │
+    │  │   - ACT_RU_EXECUTION     (Executions)                 │  │
+    │  │   - ACT_RU_VARIABLE      (Variables)                  │  │
+    │  └──────────────────────────────────────────────────────┘  │
+    │  ┌──────────────────────────────────────────────────────┐  │
+    │  │ ACT_HI_* (History Tables)                             │  │
+    │  │   - ACT_HI_PROCINST     (Historic process instances)  │  │
+    │  │   - ACT_HI_TASKINST     (Historic tasks)              │  │
+    │  │   - ACT_HI_VARINST      (Historic variables)          │  │
+    │  └──────────────────────────────────────────────────────┘  │
+    │  ┌──────────────────────────────────────────────────────┐  │
+    │  │ ACT_ID_* (Identity Tables)                           │  │
+    │  │   - ACT_ID_USER         (Flowable users)              │  │
+    │  │   - ACT_ID_GROUP        (Flowable groups)             │  │
+    │  │   - ACT_ID_MEMBERSHIP   (User-group links)            │  │
+    │  └──────────────────────────────────────────────────────┘  │
+    │  ┌──────────────────────────────────────────────────────┐  │
+    │  │ ACT_RE_* (Repository Tables)                         │  │
+    │  │   - ACT_RE_DEPLOYMENT   (Deployments)                  │  │
+    │  │   - ACT_RE_PROCDEF      (Process definitions)         │  │
+    │  └──────────────────────────────────────────────────────┘  │
+    └─────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │              IN-MEMORY STORAGE (Java Map)                   │
+    │  ┌──────────────────────────────────────────────────────┐  │
+    │  │ InMemoryUserAccountRepository                        │  │
+    │  │   - User accounts (admin, user, manager, hr)          │  │
+    │  │   - Passwords (BCrypt encoded)                       │  │
+    │  │   - Roles (ROLE_ADMIN, ROLE_USER)                     │  │
+    │  │   - Groups (managers, hr_staff, employees)           │  │
+    │  └──────────────────────────────────────────────────────┘  │
+    └─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          KEY DEPENDENCIES                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    pom.xml
+         │
+         ├── spring-boot-starter-jdbc    → Provides DataSource support
+         ├── h2                          → H2 database driver
+         ├── flowable-spring-boot-starter-process → Flowable integration
+         └── flowable-engine            → Flowable core engine
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          CONNECTION STRING                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    JDBC URL:    jdbc:h2:mem:workflow
+    Username:    sa
+    Password:    (empty)
+    Console:     http://localhost:8080/h2-console
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          FLOW SUMMARY                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    1. application.yml → Spring Boot → DataSource Bean
+    2. DataSource → Flowable Starter → ProcessEngine
+    3. ProcessEngine → Creates ACT_* tables in H2
+    4. API Request → Controller → Service → Flowable Service
+    5. Flowable Service → DataSource → H2 Database
+    6. Results ← H2 ← DataSource ← Flowable Service ← Service ← Controller
+
