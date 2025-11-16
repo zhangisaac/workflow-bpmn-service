@@ -110,11 +110,11 @@ Refer to Swagger UI for request/response schemas.
 
 - Token refresh/blacklisting is not implemented; login again once tokens expire.
 - JWT authentication with refresh tokens and blacklist is implemented:
-  - POST /api/auth/login → returns accessToken (default 120m) and refreshToken (default 7d)
-  - POST /api/auth/refresh → returns new accessToken using refreshToken
-  - POST /api/auth/logout → blacklists access token and revokes refresh token
-  - Configure in backend/src/main/resources/application.yml under `jwt.*`
-  - Timestamps are stored as UTC Instants; convert to local time only for display
+    - POST /api/auth/login → returns accessToken (default 10m) and refreshToken (default 1d)
+    - POST /api/auth/refresh → returns new accessToken using refreshToken
+    - POST /api/auth/logout → blacklists access token and revokes refresh token
+    - Configure in backend/src/main/resources/application.yml under `jwt.*`
+    - Timestamps are stored as UTC Instants; convert to local time only for display
 - Flowable identity data is derived from the in-memory user repository at startup. Extend the repository for persistence
   if needed.
 - Add automated tests (unit/integration) around workflow orchestration and security for production readiness.

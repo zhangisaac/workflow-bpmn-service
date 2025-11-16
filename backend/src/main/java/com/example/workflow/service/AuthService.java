@@ -70,7 +70,7 @@ public class AuthService {
 
     /**
      * Refresh access token using a valid refresh token.
-     * 
+     *
      * @param request Refresh token request
      * @return New LoginResponse with new access token and optionally new refresh token
      * @throws IllegalArgumentException if refresh token is invalid or expired
@@ -108,8 +108,8 @@ public class AuthService {
 
     /**
      * Logout user by blacklisting the access token and revoking refresh token.
-     * 
-     * @param accessToken The access token to blacklist
+     *
+     * @param accessToken  The access token to blacklist
      * @param refreshToken The refresh token to revoke (optional)
      */
     public void logout(String accessToken, String refreshToken) {
@@ -128,7 +128,7 @@ public class AuthService {
     /**
      * Logout user by username (revokes all refresh tokens and blacklists all active tokens).
      * Useful for security breaches or password changes.
-     * 
+     *
      * @param username The username whose tokens should be revoked
      */
     public void logoutAll(String username) {

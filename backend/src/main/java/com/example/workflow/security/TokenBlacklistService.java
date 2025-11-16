@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Service to manage blacklisted JWT tokens.
  * Tokens are blacklisted when users logout or tokens are revoked.
- * 
+ * <p>
  * This implementation uses in-memory storage. For production, consider:
  * - Using Redis for distributed systems
  * - Using H2 database table for persistence
@@ -29,8 +29,8 @@ public class TokenBlacklistService {
     /**
      * Add a token to the blacklist.
      * The token will be considered invalid until it naturally expires.
-     * 
-     * @param token The JWT token to blacklist
+     *
+     * @param token          The JWT token to blacklist
      * @param expirationTime When the token naturally expires (for cleanup)
      */
     public void blacklistToken(String token, Instant expirationTime) {
@@ -42,14 +42,14 @@ public class TokenBlacklistService {
 
     /**
      * Check if a token is blacklisted.
-     * 
+     *
      * @param token The JWT token to check
      * @return true if the token is blacklisted, false otherwise
      */
     public boolean isTokenBlacklisted(String token) {
         String tokenKey = token.length() > 50 ? token.substring(0, 50) + "..." : token;
         Instant expiration = blacklist.get(tokenKey);
-        
+
         if (expiration == null) {
             return false;
         }
@@ -66,7 +66,7 @@ public class TokenBlacklistService {
 
     /**
      * Remove a token from the blacklist (e.g., if it was blacklisted by mistake).
-     * 
+     *
      * @param token The JWT token to remove from blacklist
      */
     public void removeFromBlacklist(String token) {
@@ -82,7 +82,7 @@ public class TokenBlacklistService {
     public void cleanupExpiredTokens() {
         Instant now = Instant.now();
         int removed = 0;
-        
+
         var iterator = blacklist.entrySet().iterator();
         while (iterator.hasNext()) {
             var entry = iterator.next();
@@ -91,7 +91,7 @@ public class TokenBlacklistService {
                 removed++;
             }
         }
-        
+
         if (removed > 0) {
             logger.info("Cleaned up {} expired blacklisted tokens", removed);
         }
@@ -99,7 +99,7 @@ public class TokenBlacklistService {
 
     /**
      * Get the current size of the blacklist.
-     * 
+     *
      * @return Number of tokens in the blacklist
      */
     public int getBlacklistSize() {

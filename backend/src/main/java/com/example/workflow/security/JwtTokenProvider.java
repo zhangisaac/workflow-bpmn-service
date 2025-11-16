@@ -14,9 +14,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Date;
@@ -34,7 +32,7 @@ public class JwtTokenProvider {
     public JwtTokenProvider(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration-in-minutes}") long expirationInMinutes,
-            @Value("${jwt.refresh-expiration-in-days:7}") long refreshExpirationInDays,
+            @Value("${jwt.refresh-expiration-in-days:1}") long refreshExpirationInDays,
             TokenBlacklistService blacklistService
     ) {
         byte[] keyBytes;
@@ -94,7 +92,7 @@ public class JwtTokenProvider {
      * Generate a refresh token (long-lived token for obtaining new access tokens).
      * Note: In this implementation, refresh tokens are managed by RefreshTokenService,
      * not as JWTs. This method is kept for potential future use.
-     * 
+     *
      * @param userDetails User details
      * @return Refresh token expiration time
      */
