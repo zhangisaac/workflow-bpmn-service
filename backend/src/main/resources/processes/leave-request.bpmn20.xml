@@ -6,8 +6,14 @@
         <startEvent id="startEvent" name="Submit Leave Request"/>
         <sequenceFlow id="flow_start_to_submit" sourceRef="startEvent" targetRef="submitRequestTask"/>
 
-        <userTask id="submitRequestTask" name="Submit Leave Request" flowable:assignee="${initiator}">
+        <userTask id="submitRequestTask" name="Submit Leave Request">
             <extensionElements>
+                <flowable:taskListener event="create"
+                                       class="com.example.workflow.flowable.AssignCandidateToGroupListener">
+                    <flowable:field name="group">
+                        <flowable:string>employees</flowable:string>
+                    </flowable:field>
+                </flowable:taskListener>
                 <flowable:formProperty id="duration" name="Number of Days" type="long" required="true"/>
                 <flowable:formProperty id="reason" name="Reason" type="string" required="true"/>
             </extensionElements>
