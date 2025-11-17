@@ -8,8 +8,12 @@ import org.flowable.engine.HistoryService;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
+import org.flowable.engine.history.HistoricProcessInstance;
+import org.flowable.engine.history.HistoricProcessInstanceQuery;
 import org.flowable.engine.runtime.ProcessInstance;
+import org.flowable.identitylink.api.IdentityLink;
 import org.flowable.task.api.Task;
+import org.flowable.task.api.TaskQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -71,9 +75,10 @@ class WorkflowServiceTest {
                 any(Map.class)
         )).thenReturn(mockInstance);
 
-        when(historyService.createHistoricProcessInstanceQuery()
-                .processInstanceId(anyString())
-                .singleResult()).thenReturn(null);
+        HistoricProcessInstanceQuery historicQuery = mock(HistoricProcessInstanceQuery.class);
+        when(historyService.createHistoricProcessInstanceQuery()).thenReturn(historicQuery);
+        when(historicQuery.processInstanceId(anyString())).thenReturn(historicQuery);
+        when(historicQuery.singleResult()).thenReturn(null);
 
         // When
         ProcessInstanceDto result = workflowService.startProcess(request);
@@ -109,9 +114,10 @@ class WorkflowServiceTest {
 
         when(runtimeService.startProcessInstanceByKey(anyString(), any(), any(Map.class)))
                 .thenReturn(mockInstance);
-        when(historyService.createHistoricProcessInstanceQuery()
-                .processInstanceId(anyString())
-                .singleResult()).thenReturn(null);
+        HistoricProcessInstanceQuery historicQuery = mock(HistoricProcessInstanceQuery.class);
+        when(historyService.createHistoricProcessInstanceQuery()).thenReturn(historicQuery);
+        when(historicQuery.processInstanceId(anyString())).thenReturn(historicQuery);
+        when(historicQuery.singleResult()).thenReturn(null);
 
         // When
         workflowService.startProcess(request);
@@ -133,12 +139,13 @@ class WorkflowServiceTest {
         when(mockTask.getName()).thenReturn("Test Task");
         when(mockTask.getProcessInstanceId()).thenReturn("proc-inst-1");
 
-        when(taskService.createTaskQuery()
-                .taskAssignee(TEST_USERNAME)
-                .active()
-                .orderByTaskCreateTime()
-                .asc()
-                .list()).thenReturn(List.of(mockTask));
+        TaskQuery taskQuery = mock(TaskQuery.class);
+        when(taskService.createTaskQuery()).thenReturn(taskQuery);
+        when(taskQuery.taskAssignee(TEST_USERNAME)).thenReturn(taskQuery);
+        when(taskQuery.active()).thenReturn(taskQuery);
+        when(taskQuery.orderByTaskCreateTime()).thenReturn(taskQuery);
+        when(taskQuery.asc()).thenReturn(taskQuery);
+        when(taskQuery.list()).thenReturn(List.of(mockTask));
 
         when(taskService.getIdentityLinksForTask("task-1"))
                 .thenReturn(Collections.emptyList());
@@ -150,7 +157,7 @@ class WorkflowServiceTest {
         assertNotNull(result);
         assertEquals(1, result.size());
         assertEquals("task-1", result.get(0).id());
-        verify(taskService).createTaskQuery().taskAssignee(TEST_USERNAME);
+        verify(taskService).createTaskQuery();
     }
 
     @Test
@@ -160,12 +167,20 @@ class WorkflowServiceTest {
         TaskCompletionRequest request = new TaskCompletionRequest(Map.of("approved", true));
 
         Task mockTask = mock(Task.class);
-        when(mockTask.getId()).thenReturn(taskId);
+        when(mockTask.getId()).thenReturn(taskId); // Used in ensureUserCanInteractWithTask
         when(mockTask.getAssignee()).thenReturn(TEST_USERNAME);
-        when(mockTask.getProcessInstanceId()).thenReturn("proc-inst-1");
+        lenient().when(mockTask.getProcessInstanceId()).thenReturn("proc-inst-1"); // Not used in completeTask
 
-        when(taskService.createTaskQuery().taskId(taskId).singleResult()).thenReturn(mockTask);
-        when(taskService.getIdentityLinksForTask(taskId)).thenReturn(Collections.emptyList());
+        TaskQuery taskQuery = mock(TaskQuery.class);
+        when(taskService.createTaskQuery()).thenReturn(taskQuery);
+        when(taskQuery.taskId(taskId)).thenReturn(taskQuery);
+        when(taskQuery.singleResult()).thenReturn(mockTask);
+        
+        // Set up identity links so user passes ensureUserCanInteractWithTask check
+        IdentityLink identityLink = mock(IdentityLink.class);
+        when(identityLink.getUserId()).thenReturn(TEST_USERNAME);
+        when(identityLink.getGroupId()).thenReturn(null);
+        when(taskService.getIdentityLinksForTask(taskId)).thenReturn(List.of(identityLink));
         when(userContextService.currentUserGroups()).thenReturn(Collections.emptySet());
 
         // When
@@ -184,7 +199,10 @@ class WorkflowServiceTest {
     void testCompleteTask_TaskNotFound() {
         // Given
         String taskId = "non-existent-task";
-        when(taskService.createTaskQuery().taskId(taskId).singleResult()).thenReturn(null);
+        TaskQuery taskQuery = mock(TaskQuery.class);
+        when(taskService.createTaskQuery()).thenReturn(taskQuery);
+        when(taskQuery.taskId(taskId)).thenReturn(taskQuery);
+        when(taskQuery.singleResult()).thenReturn(null);
 
         // When & Then
         IllegalArgumentException exception = assertThrows(
@@ -199,10 +217,17 @@ class WorkflowServiceTest {
         // Given
         String taskId = "task-1";
         Task mockTask = mock(Task.class);
-        when(mockTask.getId()).thenReturn(taskId);
+        lenient().when(mockTask.getId()).thenReturn(taskId); // Not used in completeTask
         when(mockTask.getAssignee()).thenReturn(null);
+        lenient().when(mockTask.getProcessInstanceId()).thenReturn("proc-inst-1"); // Not used - we throw early
 
-        when(taskService.createTaskQuery().taskId(taskId).singleResult()).thenReturn(mockTask);
+        TaskQuery taskQuery = mock(TaskQuery.class);
+        when(taskService.createTaskQuery()).thenReturn(taskQuery);
+        when(taskQuery.taskId(taskId)).thenReturn(taskQuery);
+        when(taskQuery.singleResult()).thenReturn(mockTask);
+        // These are not used since we return early, but Mockito strict mode requires lenient
+        lenient().when(taskService.getIdentityLinksForTask(taskId)).thenReturn(Collections.emptyList());
+        lenient().when(userContextService.currentUserGroups()).thenReturn(Collections.emptySet());
 
         // When & Then
         IllegalStateException exception = assertThrows(
@@ -217,10 +242,17 @@ class WorkflowServiceTest {
         // Given
         String taskId = "task-1";
         Task mockTask = mock(Task.class);
-        when(mockTask.getId()).thenReturn(taskId);
+        lenient().when(mockTask.getId()).thenReturn(taskId); // Not used in completeTask
         when(mockTask.getAssignee()).thenReturn("other-user");
+        lenient().when(mockTask.getProcessInstanceId()).thenReturn("proc-inst-1"); // Not used - we throw early
 
-        when(taskService.createTaskQuery().taskId(taskId).singleResult()).thenReturn(mockTask);
+        TaskQuery taskQuery = mock(TaskQuery.class);
+        when(taskService.createTaskQuery()).thenReturn(taskQuery);
+        when(taskQuery.taskId(taskId)).thenReturn(taskQuery);
+        when(taskQuery.singleResult()).thenReturn(mockTask);
+        // These are not used since we return early, but Mockito strict mode requires lenient
+        lenient().when(taskService.getIdentityLinksForTask(taskId)).thenReturn(Collections.emptyList());
+        lenient().when(userContextService.currentUserGroups()).thenReturn(Collections.emptySet());
 
         // When & Then
         IllegalStateException exception = assertThrows(
