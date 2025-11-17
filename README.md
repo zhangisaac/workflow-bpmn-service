@@ -123,7 +123,7 @@ This project includes comprehensive testing at multiple levels:
    - Real running server (`mvn spring-boot:run`)
    - Real HTTP requests (curl, shell scripts)
    - Complete workflow validation
-   - Run via: `./e2e-test.sh` or `./e2e-test-simple.sh`
+   - Run via: `./e2e-test-simple.sh`
    - See [TESTING_GUIDE.md](TESTING_GUIDE.md) for details
 
 ### Running Tests
@@ -141,7 +141,7 @@ mvn test jacoco:report
 mvn verify
 
 # Run E2E tests (requires server running)
-./e2e-test.sh
+./e2e-test-simple.sh
 ```
 
 ### Test Coverage

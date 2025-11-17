@@ -124,7 +124,7 @@ authentication.
 
 ### Quick Test Script
 
-> **Note**: For comprehensive testing, see [TESTING_GUIDE.md](TESTING_GUIDE.md). The project includes `e2e-test.sh` and `e2e-test-simple.sh` scripts for E2E testing.
+> **Note**: For comprehensive testing, see [TESTING_GUIDE.md](TESTING_GUIDE.md). The project includes `e2e-test-simple.sh` script for E2E testing.
 
 Save this as `test-endpoints.sh`:
 

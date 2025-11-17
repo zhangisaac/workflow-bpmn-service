@@ -301,8 +301,8 @@
          ├── Production profile (application.yml)
          └── Complete workflow validation
 
-    Scripts: e2e-test.sh, e2e-test-simple.sh
-    Run: ./e2e-test.sh (requires server running)
+    Script: e2e-test-simple.sh
+    Run: ./e2e-test-simple.sh (requires server running)
 
     ┌────────────────────────────────────────────────────────────────────┐
     │ COVERAGE REPORTING                                                 │

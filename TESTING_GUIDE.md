@@ -49,7 +49,7 @@ cd backend
 mvn spring-boot:run
 
 # In another terminal
-./e2e-test.sh
+./e2e-test-simple.sh
 ```
 
 ---
@@ -71,7 +71,7 @@ This project uses a **multi-layered testing approach** with three distinct test 
 | **Speed** | Very Fast | Fast | Slower |
 | **Coverage** | Business logic | Controllers, security | User journeys |
 | **CI/CD** | ✅ Automated | ✅ Automated | ⚠️ Manual/Scheduled |
-| **Run Command** | `mvn test` | `mvn verify` | `./e2e-test.sh` |
+| **Run Command** | `mvn test` | `mvn verify` | `./e2e-test-simple.sh` |
 
 ### Test Pyramid
 
@@ -227,21 +227,16 @@ Test complete workflows against a real running server with real HTTP requests.
 
 ### Scripts
 
-- **`e2e-test.sh`** - Comprehensive workflow test
-- **`e2e-test-simple.sh`** - Quick smoke test
+- **`e2e-test-simple.sh`** - E2E smoke test covering basic authentication and API access
 
 ### Example Workflow
 
-The E2E scripts test:
-- ✅ Login (admin and manager)
-- ✅ Start process instance
-- ✅ Get active processes
-- ✅ Get candidate tasks
-- ✅ Claim task
-- ✅ Complete task
+The E2E script tests:
+- ✅ Server health check
+- ✅ Login (admin)
+- ✅ Protected endpoint access
 - ✅ Token refresh
 - ✅ Logout
-- ✅ Token blacklisting
 
 ### Run
 
@@ -251,8 +246,6 @@ cd backend
 mvn spring-boot:run
 
 # Step 2: Run E2E test (in another terminal)
-./e2e-test.sh
-# or
 ./e2e-test-simple.sh
 ```
 
@@ -494,8 +487,7 @@ mvn test -Dtest=WorkflowServiceTest#testClaimTask_Success
 | Run integration tests | `mvn verify` |
 | Run specific test | `mvn test -Dtest=TestClassName` |
 | Start server | `mvn spring-boot:run` |
-| Run E2E tests | `./e2e-test.sh` |
-| Run quick E2E | `./e2e-test-simple.sh` |
+| Run E2E tests | `./e2e-test-simple.sh` |
 
 ---
 
@@ -531,7 +523,7 @@ E2E tests are **not automatically run** in CI/CD because:
 
 - **Unit Tests**: `*Test.java` (e.g., `WorkflowServiceTest.java`)
 - **Integration Tests**: `*IntegrationTest.java` (e.g., `AuthControllerIntegrationTest.java`)
-- **E2E Tests**: Shell scripts (e.g., `e2e-test.sh`)
+- **E2E Tests**: Shell scripts (e.g., `e2e-test-simple.sh`)
 
 ### 2. Test Isolation
 
@@ -648,7 +640,7 @@ mvn test jacoco:report
 open backend/target/site/jacoco/index.html
 
 # Run E2E tests
-./e2e-test.sh
+./e2e-test-simple.sh
 ```
 
 ---
@@ -657,8 +649,7 @@ open backend/target/site/jacoco/index.html
 
 - **`view-test-summary.sh`** - View test execution summary
 - **`run-jacoco.sh`** - Run tests with coverage and open report
-- **`e2e-test.sh`** - Comprehensive E2E test
-- **`e2e-test-simple.sh`** - Quick E2E smoke test
+- **`e2e-test-simple.sh`** - E2E smoke test covering basic authentication and API access
 
 ---
 
