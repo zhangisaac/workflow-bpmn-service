@@ -5,7 +5,9 @@ import com.example.workflow.repository.UserAccountRepository;
 import org.flowable.engine.IdentityService;
 import org.flowable.engine.ProcessEngine;
 import org.flowable.idm.api.Group;
+import org.flowable.idm.api.GroupQuery;
 import org.flowable.idm.api.User;
+import org.flowable.idm.api.UserQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,12 +37,13 @@ class FlowableIdentityInitializerTest {
     @Mock
     private UserAccountRepository userAccountRepository;
 
-    @InjectMocks
     private FlowableIdentityInitializer initializer;
 
     @BeforeEach
     void setUp() {
         when(processEngine.getIdentityService()).thenReturn(identityService);
+        // Manually create the initializer after mocks are set up
+        initializer = new FlowableIdentityInitializer(processEngine, userAccountRepository);
     }
 
     @Test
@@ -61,19 +64,26 @@ class FlowableIdentityInitializerTest {
 
         when(userAccountRepository.findAll()).thenReturn(List.of(admin, user));
 
+        // Mock query objects
+        GroupQuery groupQuery = mock(GroupQuery.class);
+        UserQuery userQuery = mock(UserQuery.class);
+        GroupQuery membershipQuery = mock(GroupQuery.class);
+
+        when(identityService.createGroupQuery()).thenReturn(groupQuery);
+        when(identityService.createUserQuery()).thenReturn(userQuery);
+
         // Mock group queries - groups don't exist initially
-        when(identityService.createGroupQuery().groupId(anyString()).singleResult())
-                .thenReturn(null);
+        when(groupQuery.groupId(anyString())).thenReturn(groupQuery);
+        when(groupQuery.singleResult()).thenReturn(null);
 
         // Mock user queries - users don't exist initially
-        when(identityService.createUserQuery().userId(anyString()).singleResult())
-                .thenReturn(null);
+        when(userQuery.userId(anyString())).thenReturn(userQuery);
+        when(userQuery.singleResult()).thenReturn(null);
 
         // Mock group membership queries - no memberships exist initially
-        when(identityService.createGroupQuery()
-                .groupMember(anyString())
-                .groupId(anyString())
-                .count()).thenReturn(0L);
+        when(groupQuery.groupMember(anyString())).thenReturn(membershipQuery);
+        when(membershipQuery.groupId(anyString())).thenReturn(membershipQuery);
+        when(membershipQuery.count()).thenReturn(0L);
 
         // Mock new group/user creation
         Group mockGroup = mock(Group.class);
@@ -112,22 +122,30 @@ class FlowableIdentityInitializerTest {
 
         when(userAccountRepository.findAll()).thenReturn(List.of(admin));
 
+        // Mock query objects
+        GroupQuery groupQuery = mock(GroupQuery.class);
+        UserQuery userQuery = mock(UserQuery.class);
+        GroupQuery membershipQuery = mock(GroupQuery.class);
+
+        when(identityService.createGroupQuery()).thenReturn(groupQuery);
+        when(identityService.createUserQuery()).thenReturn(userQuery);
+
         // Mock existing user
         User existingUser = mock(User.class);
-        when(identityService.createUserQuery().userId("admin").singleResult())
-                .thenReturn(existingUser);
+        when(userQuery.userId("admin")).thenReturn(userQuery);
+        when(userQuery.singleResult()).thenReturn(existingUser);
 
         // Mock group doesn't exist
-        when(identityService.createGroupQuery().groupId("managers").singleResult())
-                .thenReturn(null);
+        when(groupQuery.groupId("managers")).thenReturn(groupQuery);
+        when(groupQuery.singleResult()).thenReturn(null);
 
         Group mockGroup = mock(Group.class);
         when(identityService.newGroup("managers")).thenReturn(mockGroup);
 
-        when(identityService.createGroupQuery()
-                .groupMember("admin")
-                .groupId("managers")
-                .count()).thenReturn(0L);
+        // Mock membership query
+        when(groupQuery.groupMember("admin")).thenReturn(membershipQuery);
+        when(membershipQuery.groupId("managers")).thenReturn(membershipQuery);
+        when(membershipQuery.count()).thenReturn(0L);
 
         // When
         initializer.initializeFlowableIdentities();
@@ -154,11 +172,20 @@ class FlowableIdentityInitializerTest {
 
         when(userAccountRepository.findAll()).thenReturn(List.of(admin));
 
-        // Mock existing user and group
-        when(identityService.createUserQuery().userId("admin").singleResult())
-                .thenReturn(null);
-        when(identityService.createGroupQuery().groupId("managers").singleResult())
-                .thenReturn(null);
+        // Mock query objects
+        GroupQuery groupQuery = mock(GroupQuery.class);
+        UserQuery userQuery = mock(UserQuery.class);
+        GroupQuery membershipQuery = mock(GroupQuery.class);
+
+        when(identityService.createGroupQuery()).thenReturn(groupQuery);
+        when(identityService.createUserQuery()).thenReturn(userQuery);
+
+        // Mock existing user and group don't exist
+        when(userQuery.userId("admin")).thenReturn(userQuery);
+        when(userQuery.singleResult()).thenReturn(null);
+        
+        when(groupQuery.groupId("managers")).thenReturn(groupQuery);
+        when(groupQuery.singleResult()).thenReturn(null);
 
         User mockUser = mock(User.class);
         when(identityService.newUser("admin")).thenReturn(mockUser);
@@ -167,10 +194,9 @@ class FlowableIdentityInitializerTest {
         when(identityService.newGroup("managers")).thenReturn(mockGroup);
 
         // Mock existing membership
-        when(identityService.createGroupQuery()
-                .groupMember("admin")
-                .groupId("managers")
-                .count()).thenReturn(1L);
+        when(groupQuery.groupMember("admin")).thenReturn(membershipQuery);
+        when(membershipQuery.groupId("managers")).thenReturn(membershipQuery);
+        when(membershipQuery.count()).thenReturn(1L);
 
         // When
         initializer.initializeFlowableIdentities();

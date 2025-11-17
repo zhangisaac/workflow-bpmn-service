@@ -59,14 +59,16 @@ public class RefreshTokenService {
         RefreshTokenInfo info = refreshTokens.get(refreshToken);
 
         if (info == null) {
-            logger.debug("Refresh token not found: {}", refreshToken.substring(0, Math.min(20, refreshToken.length())));
+            String tokenPreview = refreshToken.substring(0, Math.min(20, refreshToken.length()));
+            logger.debug("Refresh token not found: {}", tokenPreview);
             return null;
         }
 
         if (info.isExpired()) {
             // Remove expired token
             refreshTokens.remove(refreshToken);
-            logger.debug("Refresh token expired and removed: {}", refreshToken.substring(0, Math.min(20, refreshToken.length())));
+            String tokenPreview = refreshToken.substring(0, Math.min(20, refreshToken.length()));
+            logger.debug("Refresh token expired and removed: {}", tokenPreview);
             return null;
         }
 
@@ -141,13 +143,13 @@ public class RefreshTokenService {
     }
 
     /**
-         * Information stored with each refresh token.
-         */
-        public record RefreshTokenInfo(String username, Instant expiration, Instant createdAt) {
+     * Information stored with each refresh token.
+     */
+    public record RefreshTokenInfo(String username, Instant expiration, Instant createdAt) {
 
         public boolean isExpired() {
-                return Instant.now().isAfter(expiration);
-            }
+            return Instant.now().isAfter(expiration);
         }
+    }
 }
 

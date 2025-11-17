@@ -330,26 +330,47 @@ curl -X POST http://localhost:8080/api/auth/logout \
 
 ## Testing
 
+> **Note**: For comprehensive testing information, see [TESTING_GUIDE.md](TESTING_GUIDE.md). This project includes Integration Tests and E2E Tests that cover token refresh and blacklisting functionality.
+
 ### Test Scenarios
+
+The following scenarios are covered by Integration Tests (`*IntegrationTest.java`) and E2E Tests:
 
 1. **Login and receive tokens:**
     - Login should return both access and refresh tokens
     - Tokens should have correct expiration times
+    - Tested in: `AuthControllerIntegrationTest`, `e2e-test.sh`
 
 2. **Refresh token:**
     - Valid refresh token should return new access token
     - Invalid refresh token should return 401
     - Expired refresh token should return 401
+    - Tested in: `AuthControllerIntegrationTest`, `e2e-test.sh`
 
 3. **Logout:**
     - Logout should blacklist access token
     - Logout should revoke refresh token
     - Blacklisted token should be rejected on subsequent requests
+    - Tested in: `AuthControllerIntegrationTest`, `e2e-test.sh`
 
 4. **Token validation:**
     - Blacklisted token should fail validation
     - Valid token should pass validation
     - Expired token should fail validation
+    - Tested in: `JwtTokenProviderTest`, `AuthControllerIntegrationTest`
+
+### Running Tests
+
+```bash
+# Run Integration Tests
+mvn verify
+
+# Run E2E Tests (requires server running)
+./e2e-test.sh
+
+# Run with coverage
+mvn test jacoco:report
+```
 
 ## Notes
 

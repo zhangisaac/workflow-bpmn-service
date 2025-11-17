@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<ruleset name="Custom PMD Ruleset"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0
+         http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+
+    <description>
+        Custom PMD ruleset that focuses on real bugs and critical issues,
+        while excluding overly strict style preferences.
+    </description>
+
+    <!-- Only include critical error-prone rules -->
+    <rule ref="category/java/errorprone.xml">
+        <!-- Exclude style preferences and false positives -->
+        <exclude name="DataflowAnomalyAnalysis"/>
+        <exclude name="CallSuperInConstructor"/>
+        <exclude name="MissingSerialVersionUID"/>
+    </rule>
+
+    <!-- Only include critical best practices -->
+    <rule ref="category/java/bestpractices.xml">
+        <!-- Exclude style preferences -->
+        <exclude name="MethodArgumentCouldBeFinal"/>
+        <exclude name="LocalVariableCouldBeFinal"/>
+        <exclude name="FieldNamingConventions"/>
+        <exclude name="VariableNamingConventions"/>
+        <exclude name="LongVariable"/>
+        <exclude name="ShortVariable"/>
+        <exclude name="OnlyOneReturn"/>
+        <exclude name="GuardLogStatement"/>
+        <exclude name="AtLeastOneConstructor"/>
+        <exclude name="AvoidDuplicateLiterals"/>
+        <exclude name="ConfusingTernary"/>
+        <exclude name="PrematureDeclaration"/>
+        <exclude name="DefaultPackage"/>
+        <exclude name="CommentDefaultAccessModifier"/>
+        <exclude name="LinguisticNaming"/>
+        <exclude name="ShortMethodName"/>
+    </rule>
+
+    <!-- Only include critical code style rules -->
+    <rule ref="category/java/codestyle.xml">
+        <!-- Exclude style preferences -->
+        <exclude name="MethodArgumentCouldBeFinal"/>
+        <exclude name="LocalVariableCouldBeFinal"/>
+        <exclude name="FieldNamingConventions"/>
+        <exclude name="VariableNamingConventions"/>
+        <exclude name="LongVariable"/>
+        <exclude name="ShortVariable"/>
+        <exclude name="OnlyOneReturn"/>
+        <exclude name="GuardLogStatement"/>
+        <exclude name="AtLeastOneConstructor"/>
+        <exclude name="AvoidDuplicateLiterals"/>
+        <exclude name="ConfusingTernary"/>
+        <exclude name="PrematureDeclaration"/>
+        <exclude name="DefaultPackage"/>
+        <exclude name="CommentDefaultAccessModifier"/>
+        <exclude name="LinguisticNaming"/>
+        <exclude name="ShortMethodName"/>
+        <exclude name="LiteralsFirstInComparisons"/>
+        <exclude name="PositionLiteralsFirstInComparisons"/>
+    </rule>
+
+</ruleset>

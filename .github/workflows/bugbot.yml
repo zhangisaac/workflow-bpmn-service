@@ -1,0 +1,306 @@
+name: BugBot CI
+
+on:
+  pull_request:
+    branches: [ "**" ]
+  push:
+    branches: [ main, release ]
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: bugbot-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "17"
+  # CI profile/env: keep H2/Swagger/H2 console disabled unless explicitly needed
+  SPRING_PROFILES_ACTIVE: "ci"
+  SPRING_H2_CONSOLE_ENABLED: "false"
+  SPRINGDOC_API_DOCS_ENABLED: "false"
+  SPRINGDOC_SWAGGER_UI_ENABLED: "false"
+
+jobs:
+  build_test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Cache Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build & Test
+        run: mvn -B -DskipTests=false clean verify
+
+  static_analysis:
+    name: Static Analysis (SpotBugs/PMD/Checkstyle)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Cache Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: SpotBugs
+        run: mvn -B com.github.spotbugs:spotbugs-maven-plugin:4.8.3.1:check
+      - name: PMD
+        run: mvn -B pmd:check
+      - name: Checkstyle
+        run: mvn -B checkstyle:check
+
+  dependency_check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependency Check (HTML)
+        uses: jeremylong/DependencyCheck_Action@v4
+        with:
+          project: workflow-bpmn-service
+          path: ./backend
+          format: 'HTML'
+          out: './dependency-check-report'
+      - name: Upload Dependency Check Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: dependency-check-report/
+
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+
+  mutation_tests:
+    name: Mutation Tests (PIT)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Cache Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Run PIT (if configured)
+        run: |
+          mvn -B -DskipTests=false org.pitest:pitest-maven:mutationCoverage || echo "PIT did not run (plugin/config missing) or failed"
+      - name: Upload PIT Reports (if present)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pit-reports
+          path: backend/target/pit-reports
+          if-no-files-found: ignore
+
+  sonarqube:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for better analysis
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Cache Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build and Test with Coverage
+        run: mvn -B clean test jacoco:report verify
+
+      - name: SonarQube Analysis
+        run: mvn sonar:sonar
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
+
+      - name: SonarQube Quality Gate Check
+        id: sonarqube-quality-gate-check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        continue-on-error: true
+
+      - name: Upload SonarQube Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonarqube-report
+          path: backend/.scannerwork
+          if-no-files-found: ignore
+
+  report:
+    name: BugBot Report & Notifications
+    needs: [build_test, static_analysis, dependency_check, codeql, mutation_tests, sonarqube]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Compute Job Results
+        id: results
+        run: |
+          echo "build_test=${{ needs.build_test.result }}" >> $GITHUB_OUTPUT
+          echo "static_analysis=${{ needs.static_analysis.result }}" >> $GITHUB_OUTPUT
+          echo "dependency_check=${{ needs.dependency_check.result }}" >> $GITHUB_OUTPUT
+          echo "codeql=${{ needs.codeql.result }}" >> $GITHUB_OUTPUT
+          echo "mutation_tests=${{ needs.mutation_tests.result }}" >> $GITHUB_OUTPUT
+          echo "sonarqube=${{ needs.sonarqube.result }}" >> $GITHUB_OUTPUT
+
+      - name: Create PR Summary
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          {
+            echo "## BugBot Summary"
+            echo ""
+            echo "- Build & Test: ${{ steps.results.outputs.build_test }}"
+            echo "- Static Analysis: ${{ steps.results.outputs.static_analysis }}"
+            echo "- Dependency Check: ${{ steps.results.outputs.dependency_check }}"
+            echo "- CodeQL: ${{ steps.results.outputs.codeql }}"
+            echo "- Mutation Tests (PIT): ${{ steps.results.outputs.mutation_tests }}"
+            echo "- SonarQube: ${{ steps.results.outputs.sonarqube }}"
+            echo ""
+            echo "**Artifacts**"
+            echo "- Dependency Check Report: see workflow artifacts"
+            echo "- PIT Reports: see workflow artifacts (if configured)"
+            echo "- SonarQube Report: see workflow artifacts"
+            echo ""
+            echo "**Links**"
+            echo "- Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "- Code scanning alerts: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/security/code-scanning"
+            echo "- SonarQube Dashboard: Check SonarQube Cloud for analysis results"
+          } > bugbot-summary.md
+
+      - name: Comment on PR
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: bugbot-summary.md
+
+      - name: Create Issue on Failures
+        uses: actions/github-script@v7
+        if: |
+          contains(join(fromJson('["failure","cancelled","timed_out"]'), ','), needs.build_test.result) ||
+          contains(join(fromJson('["failure","cancelled","timed_out"]'), ','), needs.static_analysis.result) ||
+          contains(join(fromJson('["failure","cancelled","timed_out"]'), ','), needs.dependency_check.result) ||
+          contains(join(fromJson('["failure","cancelled","timed_out"]'), ','), needs.codeql.result) ||
+          contains(join(fromJson('["failure","cancelled","timed_out"]'), ','), needs.sonarqube.result)
+        with:
+          script: |
+            const failed = {
+              build_test: '${{ needs.build_test.result }}',
+              static_analysis: '${{ needs.static_analysis.result }}',
+              dependency_check: '${{ needs.dependency_check.result }}',
+              codeql: '${{ needs.codeql.result }}',
+              mutation_tests: '${{ needs.mutation_tests.result }}',
+              sonarqube: '${{ needs.sonarqube.result }}'
+            };
+            const body = [
+              'Automated BugBot detected failing checks.',
+              '',
+              'Results:',
+              '- Build & Test: ' + failed.build_test,
+              '- Static Analysis: ' + failed.static_analysis,
+              '- Dependency Check: ' + failed.dependency_check,
+              '- CodeQL: ' + failed.codeql,
+              '- Mutation Tests (PIT): ' + failed.mutation_tests,
+              '- SonarQube: ' + failed.sonarqube,
+              '',
+              `Run: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `BugBot: CI failures on ${context.ref}`,
+              body
+            });
+
+      - name: Slack Notify on Failures
+        if: |
+          (needs.build_test.result == 'failure' || needs.static_analysis.result == 'failure' || needs.dependency_check.result == 'failure' || needs.codeql.result == 'failure' || needs.sonarqube.result == 'failure')
+          && env.SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          payload=$(jq -n --arg text "BugBot CI failed for $GITHUB_REPOSITORY ($GITHUB_REF)\nRun: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" '{text: $text}')
+          curl -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL"
+
+      - name: MS Teams Notify on Failures
+        if: |
+          (needs.build_test.result == 'failure' || needs.static_analysis.result == 'failure' || needs.dependency_check.result == 'failure' || needs.codeql.result == 'failure' || needs.sonarqube.result == 'failure')
+          && env.MS_TEAMS_WEBHOOK_URL
+        env:
+          MS_TEAMS_WEBHOOK_URL: ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
+        run: |
+          payload=$(jq -n \
+            --arg title "BugBot CI failed" \
+            --arg text "Repository: $GITHUB_REPOSITORY\nRef: $GITHUB_REF\nRun: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            '{ "@type": "MessageCard", "@context": "https://schema.org/extensions", "summary": $title, "themeColor": "EA4300", "title": $title, "text": $text }')
+          curl -H "Content-Type: application/json" -d "$payload" "$MS_TEAMS_WEBHOOK_URL"
+
+

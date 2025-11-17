@@ -2,6 +2,8 @@
 
 Base URL: `http://localhost:8080`
 
+> **Testing**: This project includes comprehensive testing. See [TESTING_GUIDE.md](TESTING_GUIDE.md) for details on Integration Tests and E2E Tests.
+
 ## 🔐 Authentication Endpoints
 
 ### Public Endpoints (No Authentication Required)
