@@ -444,6 +444,56 @@ stateDiagram-v2
     end note
 ```
 
+## Testing Architecture
+
+```mermaid
+graph TB
+    subgraph "Test Types"
+        UnitTests[Unit Tests<br/>*Test.java<br/>Mocked Dependencies]
+        IntegrationTests[Integration Tests<br/>*IntegrationTest.java<br/>Full Spring Context]
+        E2ETests[E2E Tests<br/>Shell Scripts<br/>Real Server]
+    end
+    
+    subgraph "Integration Test Environment"
+        MockMvc[MockMvc<br/>Simulated HTTP]
+        TestContext[Spring Boot Test Context<br/>@SpringBootTest]
+        TestDB[(H2 In-Memory<br/>Fresh per test)]
+        TestProfile[Test Profile<br/>application-test.yml]
+    end
+    
+    subgraph "E2E Test Environment"
+        RealServer[Real Spring Boot Server<br/>mvn spring-boot:run]
+        RealHTTP[Real HTTP Requests<br/>curl, shell scripts]
+        RealDB[(H2 Database<br/>Shared state)]
+        ProdProfile[Production Profile<br/>application.yml]
+    end
+    
+    subgraph "Coverage & Reporting"
+        JaCoCo[JaCoCo<br/>Code Coverage]
+        CoverageReport[Coverage Report<br/>HTML/XML/CSV]
+    end
+    
+    UnitTests -->|Fast, Isolated| UnitTests
+    IntegrationTests --> MockMvc
+    IntegrationTests --> TestContext
+    TestContext --> TestDB
+    TestContext --> TestProfile
+    
+    E2ETests --> RealServer
+    E2ETests --> RealHTTP
+    RealServer --> RealDB
+    RealServer --> ProdProfile
+    
+    IntegrationTests --> JaCoCo
+    UnitTests --> JaCoCo
+    JaCoCo --> CoverageReport
+    
+    style UnitTests fill:#e3f2fd
+    style IntegrationTests fill:#fff3e0
+    style E2ETests fill:#e8f5e9
+    style JaCoCo fill:#fce4ec
+```
+
 ## Key Points
 
 1. **Spring Boot Auto-Configuration**: Automatically creates DataSource from `application.yml`
@@ -456,4 +506,8 @@ stateDiagram-v2
 8. **Token Blacklisting**: Blacklisted tokens are rejected even if valid
 9. **Token Validation**: Validates blacklist status before checking signature/expiration
 10. **Timezone**: Token times are stored as UTC Instants; convert to local zone only for display
+11. **Testing Strategy**: Multi-layered approach with Unit Tests, Integration Tests, and E2E Tests
+12. **Test Coverage**: 90% overall coverage (measured by JaCoCo from Integration Tests)
+13. **Integration Tests**: Run in test environment with MockMvc, full Spring context, in-memory H2
+14. **E2E Tests**: Run against real server with real HTTP requests, testing complete workflows
 

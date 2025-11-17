@@ -25,6 +25,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
 
     public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, UserDetailsService userDetailsService) {
+        super();
         this.tokenProvider = tokenProvider;
         this.userDetailsService = userDetailsService;
     }
@@ -35,13 +36,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         // Skip JWT processing for public endpoints
         String path = request.getRequestURI();
-        if (path.equals("/api/auth/login") ||
-                path.equals("/api/auth/refresh") ||
-                path.startsWith("/h2-console/") ||
-                path.startsWith("/swagger-ui") ||
-                path.startsWith("/api/docs") ||
-                path.startsWith("/v3/api-docs") ||
-                path.startsWith("/actuator/")) {
+        if ("/api/auth/login".equals(path)
+                || "/api/auth/refresh".equals(path)
+                || path.startsWith("/h2-console/")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/api/docs")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/actuator/")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -49,7 +50,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = resolveToken(request);
 
-        if (token != null && tokenProvider.validateToken(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (token != null && tokenProvider.validateToken(token)) {
             String username = tokenProvider.getUsernameFromToken(token);
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 

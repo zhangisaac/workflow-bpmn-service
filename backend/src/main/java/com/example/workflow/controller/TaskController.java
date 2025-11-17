@@ -8,7 +8,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
@@ -49,9 +54,13 @@ public class TaskController {
     @PostMapping("/{taskId}/complete")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @Operation(summary = "Complete a task that is assigned to the current user")
-    public ResponseEntity<Map<String, String>> completeTask(@PathVariable String taskId,
-                                                            @Valid @RequestBody(required = false) TaskCompletionRequest request) {
-        workflowService.completeTask(taskId, request == null ? new TaskCompletionRequest(Map.of()) : request);
+    public ResponseEntity<Map<String, String>> completeTask(
+            @PathVariable String taskId,
+            @Valid @RequestBody(required = false) TaskCompletionRequest request) {
+        TaskCompletionRequest completionRequest = request == null
+                ? new TaskCompletionRequest(Map.of())
+                : request;
+        workflowService.completeTask(taskId, completionRequest);
         return ResponseEntity.ok(Map.of("status", "completed", "taskId", taskId));
     }
 }

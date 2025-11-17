@@ -248,6 +248,7 @@
 │                          FLOW SUMMARY                                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
+    APPLICATION FLOW:
     1. application.yml → Spring Boot → DataSource Bean
     2. DataSource → Flowable Starter → ProcessEngine
     3. ProcessEngine → Creates ACT_* tables in H2
@@ -260,6 +261,62 @@
     8. Refresh → Validate Refresh Token → Generate New Access Token
     9. Logout → Blacklist Access Token + Revoke Refresh Token
     10. Validation → Check Blacklist → Validate Signature → Set Security Context
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          TESTING FLOWS                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    ┌────────────────────────────────────────────────────────────────────┐
+    │ UNIT TESTS (*Test.java)                                            │
+    └────────────────────────────────────────────────────────────────────┘
+
+    Component → Mocked Dependencies → Assertions
+         │
+         ├── Fast execution
+         ├── Isolated testing
+         └── Business logic validation
+
+    ┌────────────────────────────────────────────────────────────────────┐
+    │ INTEGRATION TESTS (*IntegrationTest.java)                          │
+    └────────────────────────────────────────────────────────────────────┘
+
+    Test → @SpringBootTest → Full Spring Context
+         │
+         ├── MockMvc (simulated HTTP)
+         ├── In-memory H2 (fresh per test)
+         ├── Test profile (application-test.yml)
+         └── Complete request/response cycle
+
+    Coverage: 90% (JaCoCo)
+    Run: mvn verify
+
+    ┌────────────────────────────────────────────────────────────────────┐
+    │ E2E TESTS (Shell Scripts)                                          │
+    └────────────────────────────────────────────────────────────────────┘
+
+    Script → Real Server (mvn spring-boot:run)
+         │
+         ├── Real HTTP requests (curl)
+         ├── Real database (shared state)
+         ├── Production profile (application.yml)
+         └── Complete workflow validation
+
+    Scripts: e2e-test.sh, e2e-test-simple.sh
+    Run: ./e2e-test.sh (requires server running)
+
+    ┌────────────────────────────────────────────────────────────────────┐
+    │ COVERAGE REPORTING                                                 │
+    └────────────────────────────────────────────────────────────────────┘
+
+    Tests → JaCoCo Agent → Coverage Data
+         │
+         ├── Instruction coverage
+         ├── Branch coverage
+         ├── Line coverage
+         └── Method/Class coverage
+
+    Report: backend/target/site/jacoco/index.html
+    Run: mvn test jacoco:report
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                            TIMEZONE NOTE                                    │

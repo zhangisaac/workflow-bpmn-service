@@ -42,8 +42,8 @@ public class AuthController {
 
     @PostMapping("/logout")
     @Operation(summary = "Logout user",
-            description = "Blacklists the current access token and revokes refresh token. " +
-                    "Requires authentication. Pass refresh token in request body if available.")
+            description = "Blacklists the current access token and revokes refresh token. "
+                    + "Requires authentication. Pass refresh token in request body if available.")
     public ResponseEntity<Void> logout(@RequestBody(required = false) RefreshTokenRequest request,
                                        HttpServletRequest httpRequest,
                                        Authentication authentication) {

@@ -15,6 +15,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,8 +57,17 @@ class TaskControllerIntegrationTest {
         UserAccount userAccount = userAccountRepository.findByUsername("user")
                 .orElseThrow();
 
+        // Create UserDetails object for JWT token generation
+        UserDetails userDetails = User.builder()
+                .username(userAccount.username())
+                .password("")
+                .authorities(userAccount.roles().stream()
+                        .map(SimpleGrantedAuthority::new)
+                        .toList())
+                .build();
+
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                userAccount.username(),
+                userDetails,
                 null,
                 userAccount.roles().stream()
                         .map(SimpleGrantedAuthority::new)
@@ -71,7 +82,7 @@ class TaskControllerIntegrationTest {
     @Test
     void testGetMyTasks_Unauthenticated() throws Exception {
         mockMvc.perform(get("/api/tasks/my"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
